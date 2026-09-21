@@ -30,6 +30,7 @@
       <MessageContent
         v-if="['text', 'summary', 'thinking'].includes(event.type)"
         :content="event.content ?? ''"
+        :streaming="streaming && index === events.length - 1"
         :class="{ 'chat-timeline__thinking': event.type === 'thinking' }"
       />
       <TracePanel

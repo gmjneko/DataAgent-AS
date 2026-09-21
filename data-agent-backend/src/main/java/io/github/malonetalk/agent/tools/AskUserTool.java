@@ -20,6 +20,7 @@ package io.github.malonetalk.agent.tools;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
 import io.agentscope.core.tool.ToolSuspendException;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -31,11 +32,26 @@ public class AskUserTool implements MarkAgentTool {
             name = ToolCallConstants.ASK_USER,
             description =
                     "Ask the user a question when an operation is unclear or requires"
-                            + " confirmation. Execution resumes after the user responds.")
+                            + " confirmation. Execution resumes after the user responds."
+                            + " When offering choices, ALWAYS use questions with structured options;"
+                            + " never embed A/B/C choices in the question text. Group related"
+                            + " questions in one call. Users can also write their own answers.")
     public String askUser(
-            @ToolParam(name = "question", description = "The question to ask the user.")
-                    String question) {
+            @ToolParam(name = "question", description = "The question or short introduction to show.")
+                    String question,
+            @ToolParam(
+                            name = "questions",
+                            description =
+                                    "Structured questions. Each item has question (prompt), options"
+                                            + " (array of distinct option labels; empty for free text),"
+                                            + " and multiple (true for multiple choice, false for single"
+                                            + " choice). Put recommendations in option labels. Omit"
+                                            + " only for a simple free-text question.",
+                            required = false)
+                    List<Question> questions) {
         log.info("Agent asks user: {}", question);
         throw new ToolSuspendException(question);
     }
+
+    public record Question(String question, List<String> options, boolean multiple) {}
 }

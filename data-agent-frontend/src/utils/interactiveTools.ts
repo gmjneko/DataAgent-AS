@@ -17,8 +17,8 @@
  */
 
 /**
- * 交互工具定义 —— 对应后端一个 throw ToolSuspendException 的工具方法。
- * 新增交互表单只需在此注册表加一条配置，无需修改 TracePanel / useAgentChat。
+ * 交互工具定义 —— 对应后端一个与用户交互的工具方法。
+ * 集中定义交互工具标签。
  */
 export interface InteractiveToolDef {
   /** tool_call 步骤的标签，如 "向用户提问" */

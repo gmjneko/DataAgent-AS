@@ -17,10 +17,12 @@
 
 <script setup lang="ts">
   import { computed } from 'vue';
-  import { marked } from 'marked';
+  import { renderMessageMarkdown } from '@/utils/messageMarkdown';
   import ChatFileDownload from './ChatFileDownload.vue';
 
-  const props = defineProps<{ content: string }>();
+  const props = withDefaults(defineProps<{ content: string; streaming?: boolean }>(), {
+    streaming: false,
+  });
   const parts = computed(() => {
     const fileIds = new Set<string>();
     const text = props.content
@@ -32,15 +34,13 @@
         return false;
       })
       .join('\n');
-    // Treat raw HTML as text; allow Markdown formatting, not executable model output.
-    const escaped = text.replace(/</g, '&lt;');
-    const html = marked.parse(escaped, { gfm: true, breaks: true }) as string;
+    const html = renderMessageMarkdown(text, props.streaming);
     return { html, fileIds: [...fileIds] };
   });
 </script>
 
 <template>
-  <div class="message-content">
+  <div class="message-content" :aria-busy="streaming">
     <div v-if="parts.html" v-html="parts.html"></div>
     <div v-if="parts.fileIds.length" class="message-content__downloads">
       <ChatFileDownload v-for="id in parts.fileIds" :key="id" :id="id" />
@@ -82,7 +82,7 @@
       background: var(--app-bg-hover);
       padding: 2px 6px;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: 15px;
       font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
     }
 
@@ -97,7 +97,7 @@
       code {
         background: none;
         padding: 0;
-        font-size: 13px;
+        font-size: 15px;
       }
     }
 

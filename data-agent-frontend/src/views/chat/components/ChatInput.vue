@@ -18,7 +18,8 @@
 <script setup lang="ts">
   import { ref, computed, nextTick, watch } from 'vue';
 
-  import type { PendingQuestion } from '@/composables/useAgentChat';
+  import type { PendingQuestion } from '@/utils/agentQuestions';
+  import AgentQuestionForm from './AgentQuestionForm.vue';
 
   const props = defineProps<{
     isStreaming: boolean;
@@ -154,11 +155,20 @@
 
 <template>
   <div class="chat-input">
-    <div v-if="props.pendingQuestion && !isStreaming" class="chat-input__question-banner">
+    <AgentQuestionForm
+      v-if="props.pendingQuestion?.questions.length && !isStreaming"
+      :key="props.pendingQuestion.toolCallId"
+      :pending="props.pendingQuestion"
+      @send="emit('send', $event)"
+    />
+    <div v-else-if="props.pendingQuestion && !isStreaming" class="chat-input__question-banner">
       <span class="chat-input__question-label">Agent 提问：</span>
       <span class="chat-input__question-text">{{ props.pendingQuestion.question }}</span>
     </div>
-    <div class="chat-input__composer">
+    <div
+      v-if="!props.pendingQuestion?.questions.length || isStreaming"
+      class="chat-input__composer"
+    >
       <textarea
         ref="textareaRef"
         v-model="inputText"
@@ -219,7 +229,7 @@
     background: var(--app-bg-page);
     border: 1px solid var(--app-border);
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--app-text-secondary);
   }
 
@@ -228,6 +238,8 @@
   }
 
   .chat-input__question-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     color: var(--app-text-primary);
   }
 
@@ -237,7 +249,7 @@
     border: none;
     border-radius: 8px;
     padding: 5px 2px;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
     font-family: inherit;
     outline: none;
@@ -284,7 +296,7 @@
 
   .chat-input__hint {
     color: var(--app-text-muted);
-    font-size: 11px;
+    font-size: 15px;
   }
 
   .chat-input__send-btn {

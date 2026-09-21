@@ -18,13 +18,8 @@
 import { ref, shallowRef } from 'vue';
 import { streamChat, fetchSessionHistory } from '@/api/agent';
 import { appendTimeline, restoreTimeline, type TimelineEvent } from '@/utils/chatTimeline';
-import { INTERACTIVE_TOOLS, isInteractiveTool } from '@/utils/interactiveTools';
-
-export interface PendingQuestion {
-  toolCallId: string;
-  toolName: string;
-  question: string;
-}
+import { isInteractiveTool } from '@/utils/interactiveTools';
+import { parsePendingQuestion, type PendingQuestion } from '@/utils/agentQuestions';
 
 export interface ChatMessage {
   id: string;
@@ -161,12 +156,7 @@ export function useAgentChat(initialSessionId?: string) {
             event.type === 'report'
           ) {
             if (event.type === 'tool_call' && isInteractiveTool(event.toolCall?.name)) {
-              const def = INTERACTIVE_TOOLS[event.toolCall!.name];
-              pendingQuestion.value = {
-                toolCallId: event.toolCall!.id,
-                toolName: event.toolCall!.name,
-                question: (event.toolCall!.input[def.questionField] as string) ?? '',
-              };
+              pendingQuestion.value = parsePendingQuestion(event);
             }
 
             if (event.type === 'report') {

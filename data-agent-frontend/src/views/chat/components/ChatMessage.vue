@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
   import { computed, ref, watch, onUnmounted } from 'vue';
+  import { ElCollapseTransition } from 'element-plus';
   import type { ChatMessage as ChatMessageType } from '@/composables/useAgentChat';
   import { splitTimeline } from '@/utils/chatTimeline';
   import MessageContent from './MessageContent.vue';
@@ -24,17 +25,19 @@
 
   const props = defineProps<{ message: ChatMessageType }>();
   const emit = defineEmits<{ previewReport: [content: string] }>();
-  const expanded = ref(false);
   const parts = computed(() => splitTimeline(props.message.timeline));
   const hasAnswer = computed(
     () =>
-      !props.message.isStreaming &&
       props.message.outcome !== 'stopped' &&
       props.message.outcome !== 'error' &&
       parts.value.answer.length > 0,
   );
+  const expanded = ref(!hasAnswer.value);
+  const processEvents = computed(() =>
+    hasAnswer.value ? parts.value.process : props.message.timeline,
+  );
   const workLabel = computed(() => {
-    if (props.message.isStreaming) return '正在处理';
+    if (props.message.isStreaming) return hasAnswer.value ? '正在回答' : '正在处理';
     if (props.message.outcome === 'stopped') return '已停止';
     if (props.message.outcome === 'error' || props.message.timeline.some(e => e.type === 'error'))
       return '执行中出现错误';
@@ -43,7 +46,7 @@
     return calls ? `已完成 · ${calls} 次工具调用` : '已完成';
   });
   watch(hasAnswer, done => {
-    if (done) expanded.value = false;
+    expanded.value = !done;
   });
 
   const copied = ref(false);
@@ -77,36 +80,31 @@
     </div>
     <div class="chat-message__bubble">
       <MessageContent v-if="message.role === 'user'" :content="message.content" />
-      <template v-else-if="hasAnswer">
-        <div v-if="parts.process.length" class="chat-message__work">
+      <template v-else>
+        <div v-if="processEvents.length || !hasAnswer" class="chat-message__work">
           <button
+            type="button"
             class="chat-message__work-toggle"
             :aria-expanded="expanded"
             @click="expanded = !expanded"
           >
             <el-icon :class="{ 'is-expanded': expanded }"><ArrowRight /></el-icon>
             {{ workLabel }}
+            <span v-if="message.isStreaming" class="chat-message__cursor">…</span>
           </button>
-          <ChatTimeline
-            v-if="expanded"
-            :events="parts.process"
-            :streaming="false"
-            @preview-report="emit('previewReport', $event)"
-          />
+          <ElCollapseTransition>
+            <div v-show="expanded">
+              <ChatTimeline
+                :events="processEvents"
+                :streaming="message.isStreaming && !hasAnswer"
+                @preview-report="emit('previewReport', $event)"
+              />
+            </div>
+          </ElCollapseTransition>
         </div>
         <ChatTimeline
+          v-if="hasAnswer"
           :events="parts.answer"
-          :streaming="false"
-          @preview-report="emit('previewReport', $event)"
-        />
-      </template>
-      <template v-else>
-        <div class="chat-message__status" role="status">
-          {{ workLabel }}
-          <span v-if="message.isStreaming" class="chat-message__cursor">…</span>
-        </div>
-        <ChatTimeline
-          :events="message.timeline"
           :streaming="message.isStreaming"
           @preview-report="emit('previewReport', $event)"
         />
@@ -135,8 +133,8 @@
     max-width: min(78%, 650px);
     padding: 12px 16px;
     border-radius: 14px;
-    font-size: 14px;
-    line-height: 1.65;
+    font-size: 15px;
+    line-height: 1.75;
   }
 
   .chat-message--user .chat-message__bubble {
@@ -232,17 +230,12 @@
     background: transparent;
     text-align: left;
     font: inherit;
-    font-size: 13px;
+    font-size: 15px;
   }
   .chat-message__work-toggle .el-icon {
     transition: transform 0.15s;
   }
   .chat-message__work-toggle .is-expanded {
     transform: rotate(90deg);
-  }
-  .chat-message__status {
-    color: var(--app-text-muted);
-    font-size: 13px;
-    margin-bottom: 20px;
   }
 </style>

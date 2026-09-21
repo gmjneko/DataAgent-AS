@@ -20,6 +20,7 @@
   import { useRouter } from 'vue-router';
   import { ElMessage, ElMessageBox } from 'element-plus';
   import { fetchSessionList, clearSession, type SessionInfo } from '@/api/agent';
+  import { formatDateTime } from '@/utils/dateTime';
 
   const props = defineProps<{
     activeSessionId: string | null;
@@ -108,24 +109,52 @@
     <div class="session-list__body">
       <div class="session-list__section-label">最近会话</div>
       <div v-if="sessions.length === 0 && !loading" class="session-list__empty">暂无会话</div>
-      <div
+      <el-popover
         v-for="s in sessions"
         :key="s.sessionId"
-        class="session-item"
-        :class="{ active: s.sessionId === activeSessionId }"
-        @click="selectSession(s.sessionId)"
+        placement="right-start"
+        trigger="hover"
+        :show-after="250"
+        :hide-after="100"
+        :show-arrow="false"
+        :width="300"
+        :teleported="true"
+        popper-class="session-preview"
       >
-        <div class="session-item__row">
-          <div class="session-item__main">
-            <div class="session-item__title">{{ s.title || s.sessionId }}</div>
-            <div class="session-item__ds">{{ s.datasourceName ?? '未绑定数据源' }}</div>
-            <div class="session-item__time">{{ formatTime(s.lastActiveAt) }}</div>
+        <template #reference>
+          <div
+            class="session-item"
+            :class="{ active: s.sessionId === activeSessionId }"
+            @click="selectSession(s.sessionId)"
+          >
+            <div class="session-item__row">
+              <div class="session-item__title">{{ s.title || s.sessionId }}</div>
+              <button
+                class="session-item__delete"
+                @click="e => handleDelete(e, s)"
+                title="删除会话"
+              >
+                ×
+              </button>
+            </div>
           </div>
-          <button class="session-item__delete" @click="e => handleDelete(e, s)" title="删除会话">
-            ×
-          </button>
+        </template>
+        <div class="session-preview__header">
+          <div class="session-preview__title">{{ s.title || s.sessionId }}</div>
+          <time
+            class="session-preview__time"
+            :datetime="s.lastActiveAt"
+            :title="formatDateTime(s.lastActiveAt)"
+          >
+            <el-icon><Clock /></el-icon>
+            {{ formatTime(s.lastActiveAt) }}
+          </time>
         </div>
-      </div>
+        <div class="session-preview__datasource">
+          <el-icon><Coin /></el-icon>
+          <span>{{ s.datasourceName ?? '未绑定数据源' }}</span>
+        </div>
+      </el-popover>
     </div>
 
     <div class="session-list__footer">
@@ -250,19 +279,13 @@
 
   .session-item__row {
     display: flex;
-    align-items: flex-start;
-  }
-
-  .session-item__main {
-    flex: 1;
-    min-width: 0;
+    align-items: center;
   }
 
   .session-item__delete {
     display: none;
     flex-shrink: 0;
     margin-left: 8px;
-    margin-top: 2px;
     width: 20px;
     height: 20px;
     line-height: 20px;
@@ -295,7 +318,9 @@
   }
 
   .session-item__title {
-    font-size: 13px;
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
     color: var(--app-text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -308,19 +333,55 @@
     font-weight: 600;
   }
 
-  .session-item__time {
-    font-size: 11px;
-    color: var(--app-text-muted);
-    margin-top: 4px;
+  :global(.el-popper.el-popover.session-preview) {
+    max-width: calc(100vw - 24px);
+    padding: 10px 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-bg-card);
+    color: var(--app-text-primary);
+    box-shadow: var(--app-shadow-lg);
   }
 
-  .session-item__ds {
-    font-size: 11px;
+  .session-preview__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .session-preview__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .session-preview__time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
     color: var(--app-text-muted);
-    margin-top: 2px;
+    font-size: 13px;
+    line-height: 1.5;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  }
+
+  .session-preview__datasource {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--app-text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .session-preview__datasource .el-icon {
+    flex-shrink: 0;
   }
 
   .session-list__footer {
