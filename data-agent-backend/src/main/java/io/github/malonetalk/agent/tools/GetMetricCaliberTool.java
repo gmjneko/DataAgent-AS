@@ -32,6 +32,8 @@ public class GetMetricCaliberTool implements MarkAgentTool {
     private final MetricService metricService;
 
     @Tool(
+            concurrencySafe = true,
+            readOnly = true,
             name = "get_metric_caliber",
             description =
                     """

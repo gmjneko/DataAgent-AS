@@ -17,10 +17,12 @@
  */
 package io.github.malonetalk.agent.tools;
 
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
-import io.github.malonetalk.agent.ToolCallContext;
+import io.github.malonetalk.common.ErrorCode;
+import io.github.malonetalk.exception.BusinessException;
 import io.github.malonetalk.exception.ToolExceptionMapper;
 import io.github.malonetalk.service.ReportService;
 import lombok.AllArgsConstructor;
@@ -36,9 +38,8 @@ public class GenerateReportTool implements MarkAgentTool {
     private final ReportService reportService;
     private final ToolExceptionMapper toolExceptionMapper;
 
-    private static final String DEFAULT_SESSION = "__default__";
-
     @Tool(
+            concurrencySafe = true,
             name = ToolCallConstants.GENERATE_REPORT,
             description =
                     """
@@ -80,18 +81,19 @@ public class GenerateReportTool implements MarkAgentTool {
                                     所有结论必须基于实际数据结果推理，不得杜撰。
                                     """)
                     String markdownText,
-            ToolCallContext ctx) {
-        String sessionId = ctx.sessionId();
-        if (!StringUtils.hasText(sessionId)) {
-            log.warn("工具上下文中不存在session_id，使用默认session存储");
-            sessionId = DEFAULT_SESSION;
-        }
-        String reportSessionId = sessionId;
+            RuntimeContext ctx) {
         return toolExceptionMapper.run(
-                () ->
-                        ToolResultBlock.text(
-                                ToolCallConstants.SUCCESS_PREFIX
-                                        + reportService.create(
-                                                reportSessionId, title, markdownText)));
+                () -> {
+                    if (!StringUtils.hasText(ctx.getSessionId())
+                            || !StringUtils.hasText(title)
+                            || title.length() > 255
+                            || !StringUtils.hasText(markdownText)) {
+                        throw BusinessException.of(ErrorCode.BAD_REQUEST, "报告需要有效会话、标题（最多255字）和正文");
+                    }
+                    return ToolResultBlock.text(
+                            ToolCallConstants.SUCCESS_PREFIX
+                                    + reportService.create(
+                                            ctx.getSessionId(), title, markdownText));
+                });
     }
 }

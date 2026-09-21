@@ -66,7 +66,7 @@ Data Agent 反其道而行——**不引入任何向量检索**。语义层把�
 
 > 完整、带截图的步骤见 [docs/getting-started.md](docs/getting-started.md)。
 
-**前置依赖**：JDK 17+、Maven 3.9+、Node 18+、pnpm 8+、MySQL 8+、Python 3+（需安装 pandas、numpy、scipy）。
+**前置依赖**：JDK 21、Maven 3.9+、Node 18+、pnpm 8+、MySQL 5.7+、Python 3+（需安装 pandas、numpy、scipy）。
 
 ```bash
 # 1. 建元数据库并初始化表结构
@@ -152,3 +152,8 @@ pnpm install && pnpm dev
 </a>
 
 ---
+## AgentScope Java 2.x
+
+后端已升级至正式版 AgentScope Java **2.0.2**，使用单例 HarnessAgent、隔离的 AgentState、上下文压缩、结构化会话历史与动态 MCP 工具注册。系统管理新增 MCP 配置页面（超级管理员可见）。
+
+已有部署先执行 `sql/migration_agentscope_v2.sql`，设置凭据环境变量并持久化 AgentScope workspace。旧 1.x 会话不续聊迁移，仅支持单后端实例。配置、升级步骤和接口见 [2.x 升级说明](docs/agentscope-v2-upgrade.md)。

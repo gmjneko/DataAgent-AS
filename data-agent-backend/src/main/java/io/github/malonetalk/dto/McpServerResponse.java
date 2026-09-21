@@ -24,7 +24,9 @@ import io.github.malonetalk.enums.TransportType;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import lombok.Builder;
 
+@Builder
 public record McpServerResponse(
         Integer id,
         String name,
@@ -45,4 +47,6 @@ public record McpServerResponse(
         String status,
         String description,
         LocalDateTime createTime,
-        LocalDateTime updateTime) {}
+        LocalDateTime updateTime,
+        List<String> enableTools,
+        List<String> disableTools) {}

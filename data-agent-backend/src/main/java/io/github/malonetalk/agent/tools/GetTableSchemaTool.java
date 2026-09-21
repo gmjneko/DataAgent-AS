@@ -17,10 +17,10 @@
  */
 package io.github.malonetalk.agent.tools;
 
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
-import io.github.malonetalk.agent.ToolCallContext;
 import io.github.malonetalk.dto.prompt.ColumnPromptResponse;
 import io.github.malonetalk.entity.Datasource;
 import io.github.malonetalk.exception.ToolExceptionMapper;
@@ -40,6 +40,8 @@ public class GetTableSchemaTool implements MarkAgentTool {
     private final ToolExceptionMapper toolExceptionMapper;
 
     @Tool(
+            concurrencySafe = true,
+            readOnly = true,
             name = "get_table_schema",
             description =
                     """
@@ -50,11 +52,11 @@ public class GetTableSchemaTool implements MarkAgentTool {
     public ToolResultBlock getTableSchema(
             @ToolParam(name = "table_name", description = "The table name to query schema for")
                     String tableName,
-            ToolCallContext ctx) {
+            RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
                     Datasource datasource =
-                            dataSourceService.getDatasourceForSession(ctx.sessionId());
+                            dataSourceService.getDatasourceForSession(ctx.getSessionId());
                     List<ColumnPromptResponse> columns =
                             columnSemanticService.getMergedTableSchema(
                                     datasource.getId(), tableName);

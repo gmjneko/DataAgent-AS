@@ -72,6 +72,12 @@ public class AgentController {
                                         .build());
     }
 
+    @PostMapping("/session/{sessionId}/stop")
+    public Result<Boolean> stop(@PathVariable String sessionId) {
+        agentService.stop(UserContext.require().userId(), sessionId);
+        return Result.success(true);
+    }
+
     @GetMapping("/session/{sessionId}/debug")
     public Result<List<Msg>> getSessionDebug(@PathVariable String sessionId) {
         Integer userId = UserContext.requireScopedUserId();

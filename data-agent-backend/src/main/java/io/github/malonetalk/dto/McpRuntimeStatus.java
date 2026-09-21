@@ -15,9 +15,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  * limitations under the License.
  */
-package io.github.malonetalk.agent;
+package io.github.malonetalk.dto;
 
+import java.time.Instant;
+import java.util.List;
 import lombok.Builder;
 
 @Builder
-public record ToolCallContext(String sessionId, Integer userId) {}
+public record McpRuntimeStatus(
+        Integer serverId,
+        String connectionState,
+        Instant lastConnectedAt,
+        String error,
+        List<ToolInfo> tools,
+        List<ToolInfo> discoveredTools) {
+    public McpRuntimeStatus {
+        tools = tools == null ? List.of() : List.copyOf(tools);
+        discoveredTools = discoveredTools == null ? List.of() : List.copyOf(discoveredTools);
+    }
+
+    public record ToolInfo(String name, String description, boolean readOnly) {}
+}

@@ -23,7 +23,7 @@ import lombok.Builder;
  * 当前登录用户的轻量投影，由拦截器在同步请求线程放入 ThreadLocal。
  *
  * <p>仅承载鉴权必要字段（不含 password_hash），供管理/会话等同步 API 取用。Agent 异步链路
- * （Reactor 弹性线程）拿不到此 ThreadLocal——权限轮次会改为通过 ToolCallContext 显式传 userId。
+ * （Reactor 弹性线程）拿不到此 ThreadLocal——通过 RuntimeContext 显式传 userId。
  */
 @Builder
 public record UserContext(

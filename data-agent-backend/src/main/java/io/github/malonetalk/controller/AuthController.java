@@ -69,7 +69,11 @@ public class AuthController {
         }
         String token = jwtUtil.generate(user.getId());
         UserInfoResponse info =
-                new UserInfoResponse(user.getId(), user.getUsername(), user.getDisplayName());
+                new UserInfoResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getDisplayName(),
+                        Boolean.TRUE.equals(user.getSuperAdmin()));
         return Result.success(new LoginResponse(token, info));
     }
 
@@ -77,7 +81,11 @@ public class AuthController {
     public Result<UserInfoResponse> me() {
         UserContext context = UserContext.require();
         return Result.success(
-                new UserInfoResponse(context.userId(), context.username(), context.displayName()));
+                new UserInfoResponse(
+                        context.userId(),
+                        context.username(),
+                        context.displayName(),
+                        Boolean.TRUE.equals(context.superAdmin())));
     }
 
     @PostMapping("/change-password")

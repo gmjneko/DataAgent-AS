@@ -18,6 +18,7 @@
 package io.github.malonetalk.convertor.handler;
 
 import io.agentscope.core.message.ToolResultBlock;
+import io.agentscope.core.message.ToolResultState;
 import io.github.malonetalk.agent.tools.ToolCallConstants;
 import io.github.malonetalk.dto.ChatStreamEvent;
 import io.github.malonetalk.dto.ChatStreamEvent.ToolCallInfo;
@@ -30,7 +31,8 @@ public class AskUserToolResultHandler implements ToolResultHandler {
 
     @Override
     public boolean supports(ToolResultBlock block, String text) {
-        return block.isSuspended() && ToolCallConstants.ASK_USER.equals(block.getName());
+        return block.getState() == ToolResultState.RUNNING
+                && ToolCallConstants.ASK_USER.equals(block.getName());
     }
 
     @Override

@@ -17,12 +17,17 @@
  */
 package io.github.malonetalk.mapper;
 
+import io.github.malonetalk.entity.UserSession;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface UserSessionMapper {
+
+    List<UserSession> selectAll();
+
+    Integer selectOwner(@Param("sessionId") String sessionId);
 
     /** 首次访问声明归属；主键冲突静默忽略。 */
     int insertIgnore(@Param("userId") int userId, @Param("sessionId") String sessionId);

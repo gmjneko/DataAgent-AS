@@ -69,7 +69,16 @@ services:
       # 初始管理员密码（首次启动时使用）
       ADMIN_INIT_PASSWORD: ${ADMIN_INIT_PASSWORD:-admin}
 
+      AGENTSCOPE_WORKSPACE: /app/workspace
+      AGENTSCOPE_STATE_TABLE: ${AGENTSCOPE_STATE_TABLE:-agentscope_agent_state}
+      AGENTSCOPE_TRIGGER_MESSAGES: ${AGENTSCOPE_TRIGGER_MESSAGES:-30}
+      AGENTSCOPE_KEEP_MESSAGES: ${AGENTSCOPE_KEEP_MESSAGES:-10}
+      AGENTSCOPE_TRIGGER_TOKENS: ${AGENTSCOPE_TRIGGER_TOKENS:-32000}
+      AGENTSCOPE_MAX_TOOL_RESULT_CHARS: ${AGENTSCOPE_MAX_TOOL_RESULT_CHARS:-80000}
+      AGENTSCOPE_MCP_ENABLED: ${AGENTSCOPE_MCP_ENABLED:-true}
       TZ: Asia/Shanghai
+    volumes:
+      - data-agent-workspace:/app/workspace
     ports:
       # 可通过 .env.example 覆盖：BACKEND_PORT=8081
       - "${BACKEND_PORT:-8080}:8080"
@@ -96,6 +105,8 @@ services:
       - data-agent-network
 
 volumes:
+  data-agent-workspace:
+    name: data-agent-workspace
   data-agent-mysql:
     name: data-agent-mysql
 

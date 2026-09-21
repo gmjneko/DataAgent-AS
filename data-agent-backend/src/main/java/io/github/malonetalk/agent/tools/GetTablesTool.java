@@ -17,11 +17,11 @@
  */
 package io.github.malonetalk.agent.tools;
 
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
 import io.agentscope.core.util.JsonUtils;
-import io.github.malonetalk.agent.ToolCallContext;
 import io.github.malonetalk.entity.Datasource;
 import io.github.malonetalk.exception.ToolExceptionMapper;
 import io.github.malonetalk.service.DatasourceService;
@@ -39,6 +39,8 @@ public class GetTablesTool implements MarkAgentTool {
     private final ToolExceptionMapper toolExceptionMapper;
 
     @Tool(
+            concurrencySafe = true,
+            readOnly = true,
             name = "get_tables",
             description =
                     """
@@ -56,11 +58,11 @@ public class GetTablesTool implements MarkAgentTool {
                                     """,
                             required = false)
                     List<String> domains,
-            ToolCallContext ctx) {
+            RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
                     Datasource dataSource =
-                            dataSourceService.getDatasourceForSession(ctx.sessionId());
+                            dataSourceService.getDatasourceForSession(ctx.getSessionId());
                     return ToolResultBlock.text(
                             JsonUtils.getJsonCodec()
                                             .toJson(

@@ -19,6 +19,7 @@ package io.github.malonetalk.exception;
 
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ToolResultBlock;
+import io.agentscope.core.message.ToolResultState;
 import io.agentscope.core.tool.ToolSuspendException;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,12 @@ public class ToolExceptionMapper {
     // TODO: 所有工具都接上，并且转为AOP切面形式
     public ToolResultBlock run(ToolAction action) {
         try {
-            return action.run();
+            ToolResultBlock result = action.run();
+            return result.getState() == ToolResultState.RUNNING
+                            && !Boolean.TRUE.equals(
+                                    result.getMetadata().get(ToolResultBlock.METADATA_SUSPENDED))
+                    ? result.withState(ToolResultState.SUCCESS)
+                    : result;
         } catch (ToolSuspendException exception) {
             // 挂起不是错误：交给 agentscope 走 ask_user/ask_caliber 恢复流程，吞掉会破坏交互语义。
             throw exception;
@@ -52,12 +58,13 @@ public class ToolExceptionMapper {
 
     private ToolResultBlock toToolError(ErrorResponse errorResponse) {
         return ToolResultBlock.of(
-                TextBlock.builder().text(errorResponse.message()).build(),
-                Map.of(
-                        METADATA_ERROR_CODE,
-                        errorResponse.errorCode().getCode(),
-                        METADATA_ERROR_MESSAGE,
-                        errorResponse.message()));
+                        TextBlock.builder().text(errorResponse.message()).build(),
+                        Map.of(
+                                METADATA_ERROR_CODE,
+                                errorResponse.errorCode().getCode(),
+                                METADATA_ERROR_MESSAGE,
+                                errorResponse.message()))
+                .withState(ToolResultState.ERROR);
     }
 
     @FunctionalInterface

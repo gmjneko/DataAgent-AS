@@ -22,6 +22,7 @@ export interface UserInfoResponse {
   userId: number;
   username: string;
   displayName: string;
+  superAdmin: boolean;
 }
 
 export interface LoginResponse {

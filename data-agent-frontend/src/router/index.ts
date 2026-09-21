@@ -18,9 +18,16 @@
 
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
+import { fetchMe } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/system/mcp',
+    name: 'McpManage',
+    component: () => import('@/views/mcp/McpManage.vue'),
+    meta: { title: 'MCP 管理', admin: true },
+  },
   {
     path: '/login',
     name: 'Login',
@@ -136,7 +143,7 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   document.title = `${to.meta.title || 'Data Agent'}`;
   const userStore = useUserStore();
   if (!userStore.isLoggedIn && to.path !== '/login') {
@@ -144,6 +151,18 @@ router.beforeEach((to, _from, next) => {
     return;
   }
   if (userStore.isLoggedIn && to.path === '/login') {
+    next('/chat');
+    return;
+  }
+  if (userStore.isLoggedIn && userStore.userInfo?.superAdmin === undefined) {
+    try {
+      userStore.setUserInfo(await fetchMe());
+    } catch {
+      next('/login');
+      return;
+    }
+  }
+  if (to.meta.admin && !userStore.userInfo?.superAdmin) {
     next('/chat');
     return;
   }

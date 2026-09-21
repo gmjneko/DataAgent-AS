@@ -110,3 +110,6 @@ yarn-integrity
 .spec-workflow
 
 application-dev.properties
+
+# AgentScope local state and transcripts
+.agentscope/

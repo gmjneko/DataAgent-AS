@@ -23,15 +23,14 @@ import io.github.malonetalk.entity.McpServer;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", imports = McpJson.class)
 public interface McpServerConverter {
-
-    @Mapping(
-            target = "args",
-            expression = "java(request.args() != null ? String.join(\",\", request.args()) : null)")
-    @Mapping(target = "env", ignore = true)
-    @Mapping(target = "headers", ignore = true)
-    @Mapping(target = "queryParams", ignore = true)
+    @Mapping(target = "args", expression = "java(McpJson.encode(request.args()))")
+    @Mapping(target = "env", expression = "java(McpJson.encode(request.env()))")
+    @Mapping(target = "headers", expression = "java(McpJson.encode(request.headers()))")
+    @Mapping(target = "queryParams", expression = "java(McpJson.encode(request.queryParams()))")
+    @Mapping(target = "enableTools", expression = "java(McpJson.encode(request.enableTools()))")
+    @Mapping(target = "disableTools", expression = "java(McpJson.encode(request.disableTools()))")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "creatorId", ignore = true)
@@ -39,13 +38,11 @@ public interface McpServerConverter {
     @Mapping(target = "updateTime", ignore = true)
     McpServer toEntity(McpServerRequest request);
 
-    @Mapping(
-            target = "args",
-            expression =
-                    "java(mcpServer.getArgs() != null ?"
-                            + " java.util.List.of(mcpServer.getArgs().split(\",\")) : null)")
-    @Mapping(target = "env", expression = "java(null)")
-    @Mapping(target = "headers", expression = "java(null)")
-    @Mapping(target = "queryParams", expression = "java(null)")
-    McpServerResponse toResponse(McpServer mcpServer);
+    @Mapping(target = "args", expression = "java(McpJson.list(server.getArgs()))")
+    @Mapping(target = "env", expression = "java(McpJson.masked(server.getEnv()))")
+    @Mapping(target = "headers", expression = "java(McpJson.masked(server.getHeaders()))")
+    @Mapping(target = "queryParams", expression = "java(McpJson.masked(server.getQueryParams()))")
+    @Mapping(target = "enableTools", expression = "java(McpJson.list(server.getEnableTools()))")
+    @Mapping(target = "disableTools", expression = "java(McpJson.list(server.getDisableTools()))")
+    McpServerResponse toResponse(McpServer server);
 }

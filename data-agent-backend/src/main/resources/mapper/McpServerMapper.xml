@@ -21,6 +21,8 @@
         <result column="redirect_policy" property="redirectPolicy"/>
         <result column="status" property="status"/>
         <result column="description" property="description"/>
+        <result column="enable_tools" property="enableTools"/>
+        <result column="disable_tools" property="disableTools"/>
         <result column="creator_id" property="creatorId"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
@@ -48,13 +50,13 @@
             url, headers, query_params,
             timeout, initialization_timeout,
             enable_elicitation, http_version, connect_timeout, redirect_policy,
-            status, description, creator_id, create_time, update_time
+            status, description, enable_tools, disable_tools, creator_id, create_time, update_time
         ) VALUES (
             #{name}, #{transportType}, #{clientType}, #{command}, #{args}, #{env},
             #{url}, #{headers}, #{queryParams},
             #{timeout}, #{initializationTimeout},
             #{enableElicitation}, #{httpVersion}, #{connectTimeout}, #{redirectPolicy},
-            #{status}, #{description}, #{creatorId}, #{createTime}, #{updateTime}
+            #{status}, #{description}, #{enableTools}, #{disableTools}, #{creatorId}, #{createTime}, #{updateTime}
         )
     </insert>
 
@@ -76,6 +78,8 @@
             <if test="httpVersion != null">http_version = #{httpVersion},</if>
             <if test="connectTimeout != null">connect_timeout = #{connectTimeout},</if>
             <if test="redirectPolicy != null">redirect_policy = #{redirectPolicy},</if>
+            <if test="enableTools != null">enable_tools = #{enableTools},</if>
+            <if test="disableTools != null">disable_tools = #{disableTools},</if>
             <if test="status != null">status = #{status},</if>
             <if test="description != null">description = #{description},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>

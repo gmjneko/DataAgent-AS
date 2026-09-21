@@ -17,10 +17,10 @@
  */
 package io.github.malonetalk.agent.tools;
 
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
-import io.github.malonetalk.agent.ToolCallContext;
 import io.github.malonetalk.dto.TableExportResponse;
 import io.github.malonetalk.entity.Datasource;
 import io.github.malonetalk.exception.ToolExceptionMapper;
@@ -38,6 +38,7 @@ public class ExportTableTool implements MarkAgentTool {
     private final ToolExceptionMapper toolExceptionMapper;
 
     @Tool(
+            concurrencySafe = true,
             name = "export_table",
             description =
                     """
@@ -49,13 +50,13 @@ public class ExportTableTool implements MarkAgentTool {
             @ToolParam(name = "sql", description = "The SELECT SQL query statement to export")
                     String sql,
             @ToolParam(name = "title", description = "A short title for this export") String title,
-            ToolCallContext ctx) {
+            RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
                     Datasource datasource =
-                            datasourceService.getDatasourceForSession(ctx.sessionId());
+                            datasourceService.getDatasourceForSession(ctx.getSessionId());
                     TableExportResponse export =
-                            tableExportService.create(ctx.sessionId(), datasource, title, sql);
+                            tableExportService.create(ctx.getSessionId(), datasource, title, sql);
                     return ToolResultBlock.text(formatResult(export));
                 });
     }

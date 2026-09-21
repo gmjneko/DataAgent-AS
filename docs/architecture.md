@@ -7,7 +7,7 @@
 | 组件 | 技术 | 职责 |
 | --- | --- | --- |
 | 前端 | Vue 3 + TypeScript + Vite + Element Plus | 聊天界面、数据源管理、语义管理、资产管理、系统管理 |
-| 后端 | Spring Boot 4（Java 17+） | Agent 推理、工具执行、语义层、数据源、会话、MCP 管理 |
+| 后端 | Spring Boot 4（Java 21） | Agent 推理、工具执行、语义层、数据源、会话、MCP 管理 |
 | Skill 系统 | 多源加载（文件系统 / Git / Nacos / classpath） | 加载"已验证查询模式"作为可复用流程 |
 | 元数据库 | MySQL | 存语义层、数据源、会话、MCP 配置、报表、用户、角色与权限等 |
 | 查询数据源 | 任意 JDBC 兼容关系型数据库 | 用户真正要查的业务库，由 Agent 动态连接；默认内置 MySQL 驱动，其他数据库需按需加入驱动 |
@@ -87,3 +87,11 @@
 > 前端导航当前收敛为「AI 智能分析」「数据源管理」「语义管理」「资产管理」「系统管理」。「语义管理」包含数据领域、表语义、指标口径与逻辑外键；「资产管理」包含报告管理与表格导出；「系统管理」包含用户管理与角色管理。旧路由 `/metric`、`/report`、`/table-export`、`/sys-user`、`/sys-role` 会重定向到对应新入口。
 
 > 更完整的字段与请求/响应结构，建议直接阅读后端 `controller` 与 `dto` 包源码。
+
+## AgentScope 2.0.2 运行时
+
+`AgentConfiguration` 构建单例 HarnessAgent；`AgentService` 为请求构建 RuntimeContext，通过 `streamEvents()` 输出细粒度事件。`EventConverter` 每个流独立累计工具参数与结果，保持现有 SSE 协议。会话操作协调器将同一会话的请求和删除串行化，不同会话可以并发。
+
+`DataAgentStateStore` 基于 MysqlAgentStateStore，独立状态表保存模型上下文；`DataAgentMiddleware` 在压缩与结果卸载之前写入结构化消息日志，`SessionService` 从工作区读取完整历史。旧 agentscope_sessions 不参与新状态恢复。
+
+`McpToolRegistryService` 管理外部客户端与 Harness Toolkit 的注册、工具过滤和撤销，同时维护显式允许规则。管理接口仅供超级管理员，启用工具面向全部登录用户。SkillLoaderService 使用 2.x SkillRepository。详见 [配置与迁移说明](agentscope-v2-upgrade.md)。

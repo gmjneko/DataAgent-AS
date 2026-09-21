@@ -18,6 +18,7 @@
 package io.github.malonetalk.convertor.handler;
 
 import io.agentscope.core.message.ToolResultBlock;
+import io.agentscope.core.message.ToolResultState;
 import io.github.malonetalk.agent.tools.ToolCallConstants;
 import io.github.malonetalk.dto.ChatStreamEvent;
 import io.github.malonetalk.dto.ChatStreamEvent.ToolResultInfo;
@@ -61,7 +62,7 @@ public class GenerateReportToolResultHandler implements ToolResultHandler {
                                     block.getId(),
                                     block.getName(),
                                     reportResponse.content(),
-                                    block.isSuspended()))
+                                    block.getState() == ToolResultState.RUNNING))
                     .build();
         } catch (Exception e) {
             log.warn("解析报表结果失败", e);

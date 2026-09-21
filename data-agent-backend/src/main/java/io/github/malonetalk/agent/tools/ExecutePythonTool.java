@@ -38,6 +38,7 @@ public class ExecutePythonTool implements MarkAgentTool {
     private final Semaphore semaphore = new Semaphore(MAX_CONCURRENT);
 
     @Tool(
+            concurrencySafe = true,
             name = "execute_python",
             description =
                     """
@@ -59,6 +60,9 @@ public class ExecutePythonTool implements MarkAgentTool {
                                     """)
                     String code) {
 
+        if (code == null || code.isBlank() || code.length() > 200000) {
+            return "Error: code must contain 1 to 200000 characters.";
+        }
         if (!semaphore.tryAcquire()) {
             return String.format(
                     "Error: too many concurrent Python executions (max %d), try again later.",
@@ -73,15 +77,18 @@ public class ExecutePythonTool implements MarkAgentTool {
 
     private String doExecute(String code) {
         Path tmpDir = null;
+        Process process = null;
         try {
             tmpDir = Files.createTempDirectory("pyexec-");
             Path script = tmpDir.resolve("script.py");
             Files.writeString(script, code);
 
-            var process =
+            Path outputFile = tmpDir.resolve("output.txt");
+            process =
                     new ProcessBuilder("python3", "-I", script.toString())
                             .directory(tmpDir.toFile())
                             .redirectErrorStream(true)
+                            .redirectOutput(outputFile.toFile())
                             .start();
 
             boolean finished = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -91,8 +98,13 @@ public class ExecutePythonTool implements MarkAgentTool {
                 return "Error: execution timed out after " + TIMEOUT_SECONDS + " seconds.";
             }
 
-            String output =
-                    new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            String output;
+            try (var stream = Files.newInputStream(outputFile)) {
+                output = new String(stream.readNBytes(2_000_000), StandardCharsets.UTF_8);
+            }
+            if (Files.size(outputFile) > 2_000_000) {
+                output += "\n[Output truncated at 2 MB]";
+            }
 
             if (process.exitValue() != 0) {
                 return "Error (exit " + process.exitValue() + "):\n" + output;
@@ -105,6 +117,10 @@ public class ExecutePythonTool implements MarkAgentTool {
             Thread.currentThread().interrupt();
             return "Error: execution interrupted.";
         } finally {
+            if (process != null && process.isAlive()) {
+                process.descendants().forEach(ProcessHandle::destroyForcibly);
+                process.destroyForcibly();
+            }
             if (tmpDir != null) {
                 try (var walk = Files.walk(tmpDir)) {
                     walk.sorted(Comparator.reverseOrder())

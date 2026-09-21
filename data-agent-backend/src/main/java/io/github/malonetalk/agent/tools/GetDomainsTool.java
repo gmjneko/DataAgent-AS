@@ -33,6 +33,8 @@ public class GetDomainsTool implements MarkAgentTool {
     private final ToolExceptionMapper toolExceptionMapper;
 
     @Tool(
+            concurrencySafe = true,
+            readOnly = true,
             name = "get_domains",
             description =
                     "Get available data domains, including domain names and descriptions. Call"

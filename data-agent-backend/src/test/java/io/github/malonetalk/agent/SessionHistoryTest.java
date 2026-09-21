@@ -32,8 +32,40 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 class SessionHistoryTest {
     @Test
+    void historyPreservesStructuredQuestionOptions() {
+        var questions =
+                List.of(
+                        Map.of(
+                                "question",
+                                "时间范围",
+                                "options",
+                                List.of("昨天", "近七天"),
+                                "multiple",
+                                false));
+        var input = Map.<String, Object>of("question", "请确认", "questions", questions);
+        TurnItem turn =
+                ReflectionTestUtils.invokeMethod(
+                        new SessionHistory(List.of()),
+                        "buildAgentTurn",
+                        List.of(
+                                ToolUseBlock.builder()
+                                        .id("q")
+                                        .name("ask_user")
+                                        .input(input)
+                                        .build()));
+        assertNotNull(turn);
+        var question =
+                turn.timeline().stream()
+                        .filter(event -> event.type() == ChatStreamEventType.QUESTION)
+                        .findFirst()
+                        .orElseThrow();
+        assertEquals(input, question.toolCall().input());
+        assertEquals("请确认", question.content());
+    }
+
+    @Test
     void historyKeepsTextAndToolsInOrderWithoutMergingThinkingAcrossText() {
-        SessionService service = new SessionService(null, null, null);
+        SessionHistory service = new SessionHistory(List.of());
         TurnItem turn =
                 ReflectionTestUtils.invokeMethod(
                         service,

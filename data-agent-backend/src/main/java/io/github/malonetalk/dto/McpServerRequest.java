@@ -23,17 +23,20 @@ import io.github.malonetalk.enums.RedirectPolicy;
 import io.github.malonetalk.enums.TransportType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
+import lombok.Builder;
 
+@Builder
 public record McpServerRequest(
-        @NotBlank(message = "name 不能为空") String name,
+        @NotBlank(message = "name 不能为空") @Size(max = 255) String name,
         @NotNull(message = "transportType 不能为空") TransportType transportType,
         @NotNull(message = "clientType 不能为空") ClientType clientType,
-        String command,
+        @Size(max = 500) String command,
         List<String> args,
         Map<String, String> env,
-        String url,
+        @Size(max = 1000) String url,
         Map<String, String> headers,
         Map<String, String> queryParams,
         Long timeout,
@@ -42,4 +45,6 @@ public record McpServerRequest(
         HttpVersion httpVersion,
         Long connectTimeout,
         RedirectPolicy redirectPolicy,
-        String description) {}
+        String description,
+        List<String> enableTools,
+        List<String> disableTools) {}

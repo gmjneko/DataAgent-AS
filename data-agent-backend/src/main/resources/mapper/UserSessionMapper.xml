@@ -2,6 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="io.github.malonetalk.mapper.UserSessionMapper">
 
+    <select id="selectAll" resultType="io.github.malonetalk.entity.UserSession">
+        SELECT user_id, session_id, create_time FROM user_session ORDER BY create_time
+    </select>
+    <select id="selectOwner" resultType="integer">
+        SELECT user_id FROM user_session WHERE session_id = #{sessionId} ORDER BY create_time LIMIT 1
+    </select>
+
     <insert id="insertIgnore">
         INSERT IGNORE INTO user_session (user_id, session_id)
         VALUES (#{userId}, #{sessionId})

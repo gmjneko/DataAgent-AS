@@ -18,6 +18,7 @@
 package io.github.malonetalk.convertor.handler;
 
 import io.agentscope.core.message.ToolResultBlock;
+import io.agentscope.core.message.ToolResultState;
 import io.github.malonetalk.dto.ChatStreamEvent;
 import io.github.malonetalk.enums.ChatStreamEventType;
 import io.github.malonetalk.exception.ToolExceptionMapper;
@@ -41,13 +42,20 @@ public interface ToolResultHandler {
                     .errorCode(code)
                     .build();
         }
+        boolean failed =
+                block.getState() == ToolResultState.ERROR
+                        || block.getState() == ToolResultState.DENIED;
         return ChatStreamEvent.builder()
-                .type(ChatStreamEventType.TOOL_RESULT)
+                .type(failed ? ChatStreamEventType.ERROR : ChatStreamEventType.TOOL_RESULT)
+                .content(failed ? text : null)
                 .messageId(messageId)
                 .isLast(isLast)
                 .toolResult(
                         new ChatStreamEvent.ToolResultInfo(
-                                block.getId(), block.getName(), text, block.isSuspended()))
+                                block.getId(),
+                                block.getName(),
+                                text,
+                                block.getState() == ToolResultState.RUNNING))
                 .build();
     }
 }

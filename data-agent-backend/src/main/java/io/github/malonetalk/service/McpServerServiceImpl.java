@@ -17,7 +17,11 @@
  */
 package io.github.malonetalk.service;
 
+import io.github.malonetalk.agent.mcp.McpClientFactory;
+import io.github.malonetalk.agent.mcp.McpToolRegistryService;
+import io.github.malonetalk.convertor.McpJson;
 import io.github.malonetalk.entity.McpServer;
+import io.github.malonetalk.enums.Status;
 import io.github.malonetalk.mapper.McpServerMapper;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +33,8 @@ import org.springframework.stereotype.Service;
 public class McpServerServiceImpl implements McpServerService {
 
     private final McpServerMapper mcpServerMapper;
+    private final McpToolRegistryService registry;
+    private final McpClientFactory factory;
 
     @Override
     public List<McpServer> findAll() {
@@ -46,21 +52,45 @@ public class McpServerServiceImpl implements McpServerService {
     }
 
     @Override
-    public boolean save(McpServer mcpServer) {
+    public synchronized boolean save(McpServer mcpServer) {
+        factory.validate(mcpServer);
         mcpServer.setCreateTime(LocalDateTime.now());
         mcpServer.setUpdateTime(LocalDateTime.now());
-        return mcpServerMapper.insert(mcpServer) > 0;
+        boolean saved = mcpServerMapper.insert(mcpServer) > 0;
+        if (saved) {
+            registry.refresh(mcpServer);
+        }
+        return saved;
     }
 
     @Override
-    public boolean update(McpServer mcpServer) {
+    public synchronized boolean update(McpServer mcpServer) {
+        McpServer stored = mcpServerMapper.selectById(mcpServer.getId());
+        if (stored == null) {
+            return false;
+        }
+        mcpServer.setEnv(McpJson.preserveSecrets(mcpServer.getEnv(), stored.getEnv()));
+        mcpServer.setHeaders(McpJson.preserveSecrets(mcpServer.getHeaders(), stored.getHeaders()));
+        mcpServer.setQueryParams(
+                McpJson.preserveSecrets(mcpServer.getQueryParams(), stored.getQueryParams()));
+        if (Status.ACTIVE.getCode().equals(mcpServer.getStatus())) {
+            factory.validate(mcpServer);
+        }
         mcpServer.setUpdateTime(LocalDateTime.now());
-        return mcpServerMapper.update(mcpServer) > 0;
+        boolean saved = mcpServerMapper.update(mcpServer) > 0;
+        if (saved) {
+            registry.refresh(mcpServerMapper.selectById(mcpServer.getId()));
+        }
+        return saved;
     }
 
     @Override
-    public boolean deleteById(Integer id) {
-        return mcpServerMapper.deleteById(id) > 0;
+    public synchronized boolean deleteById(Integer id) {
+        boolean deleted = mcpServerMapper.deleteById(id) > 0;
+        if (deleted) {
+            registry.disconnect(id);
+        }
+        return deleted;
     }
 
     @Override

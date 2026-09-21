@@ -17,10 +17,10 @@
  */
 package io.github.malonetalk.agent.tools;
 
+import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
-import io.github.malonetalk.agent.ToolCallContext;
 import io.github.malonetalk.agent.datasource.QueryResult;
 import io.github.malonetalk.agent.datasource.SqlExecutor;
 import io.github.malonetalk.entity.Datasource;
@@ -38,6 +38,8 @@ public class ExecuteSqlTool implements MarkAgentTool {
     private final ToolExceptionMapper toolExceptionMapper;
 
     @Tool(
+            concurrencySafe = true,
+            readOnly = true,
             name = "execute_sql",
             description =
                     "Execute SELECT SQL query on the target datasource and return the query result."
@@ -46,11 +48,11 @@ public class ExecuteSqlTool implements MarkAgentTool {
     public ToolResultBlock executeSql(
             @ToolParam(name = "sql", description = "The SELECT SQL query statement to execute")
                     String sql,
-            ToolCallContext ctx) {
+            RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
                     Datasource datasource =
-                            dataSourceService.getDatasourceForSession(ctx.sessionId());
+                            dataSourceService.getDatasourceForSession(ctx.getSessionId());
                     QueryResult result = sqlExecutor.execute(datasource, sql);
                     return ToolResultBlock.text(formatResult(result));
                 });

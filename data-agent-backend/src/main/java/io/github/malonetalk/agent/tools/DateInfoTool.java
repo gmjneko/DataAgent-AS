@@ -62,6 +62,8 @@ public class DateInfoTool implements MarkAgentTool {
     }
 
     @Tool(
+            concurrencySafe = true,
+            readOnly = true,
             name = "get_date_info",
             description =
                     """

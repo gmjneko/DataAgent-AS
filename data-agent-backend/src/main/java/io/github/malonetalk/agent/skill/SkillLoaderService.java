@@ -22,13 +22,10 @@ import com.alibaba.nacos.api.ai.AiFactory;
 import com.alibaba.nacos.api.ai.AiService;
 import com.alibaba.nacos.api.exception.NacosException;
 import io.agentscope.core.nacos.skill.NacosSkillRepository;
-import io.agentscope.core.skill.AgentSkill;
-import io.agentscope.core.skill.SkillBox;
 import io.agentscope.core.skill.repository.AgentSkillRepository;
 import io.agentscope.core.skill.repository.ClasspathSkillRepository;
 import io.agentscope.core.skill.repository.FileSystemSkillRepository;
 import io.agentscope.core.skill.repository.GitSkillRepository;
-import io.agentscope.core.tool.Toolkit;
 import jakarta.annotation.PreDestroy;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -46,78 +43,8 @@ public class SkillLoaderService {
     private final SkillProperties skillProperties;
     private final List<AgentSkillRepository> repositories = new ArrayList<>();
 
-    public SkillBox createSkillBox(Toolkit toolkit) {
-        SkillBox skillBox = new SkillBox(toolkit);
-        List<AgentSkillRepository> repos = createRepositories();
-
-        for (AgentSkillRepository repo : repos) {
-            try {
-                List<AgentSkill> skills = repo.getAllSkills();
-                for (AgentSkill skill : skills) {
-                    skillBox.registerSkill(skill);
-                    log.info(
-                            "Registered skill '{}' from source '{}'",
-                            skill.getSkillId(),
-                            skill.getSource());
-                }
-            } catch (Exception e) {
-                log.error("Failed to load skills from repository: {}", repo.getRepositoryInfo(), e);
-            }
-        }
-
-        // NacosSkillRepository.getAllSkills() returns an empty list because the Nacos AI
-        // API does not provide a list-all-skills endpoint. Therefore, skills must be
-        // loaded individually by name via getSkill(name), requiring the user to
-        // explicitly configure the skill-names list in application properties.
-        loadNacosSkillsByName(skillBox);
-
-        return skillBox;
-    }
-
-    // NacosSkillRepository.getAllSkills() always returns an empty list (the Nacos AI API
-    // lacks a list-all endpoint), so we load skills one by one using getSkill(name)
-    // based on the user-configured skill-names list.
-    private void loadNacosSkillsByName(SkillBox skillBox) {
-        for (SkillProperties.NacosSource ns : skillProperties.getNacos()) {
-            if (ns.getSkillNames().isEmpty()) {
-                continue;
-            }
-            try {
-                AiService aiService = createNacosAiService(ns);
-                Properties props = new Properties();
-                if (ns.getSkillVersion() != null) {
-                    props.setProperty(
-                            NacosSkillRepository.SKILL_VERSION_PATH, ns.getSkillVersion());
-                }
-                if (ns.getSkillLabel() != null) {
-                    props.setProperty(NacosSkillRepository.SKILL_LABEL_PATH, ns.getSkillLabel());
-                }
-                try (NacosSkillRepository repo =
-                        new NacosSkillRepository(aiService, ns.getNamespace(), props)) {
-                    for (String skillName : ns.getSkillNames()) {
-                        try {
-                            AgentSkill skill = repo.getSkill(skillName);
-                            skillBox.registerSkill(skill);
-                            log.info(
-                                    "Registered Nacos skill '{}' from namespace '{}'",
-                                    skill.getSkillId(),
-                                    ns.getNamespace());
-                        } catch (Exception e) {
-                            log.error(
-                                    "Failed to load Nacos skill '{}' from namespace '{}'",
-                                    skillName,
-                                    ns.getNamespace(),
-                                    e);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.error(
-                        "Failed to initialize NacosSkillRepository for namespace '{}'",
-                        ns.getNamespace(),
-                        e);
-            }
-        }
+    public List<AgentSkillRepository> repositories() {
+        return createRepositories();
     }
 
     List<AgentSkillRepository> createRepositories() {
@@ -164,6 +91,28 @@ public class SkillLoaderService {
                 log.info("Created ClasspathSkillRepository: {}", cs.getResourcePath());
             } catch (Exception e) {
                 log.error("Failed to create ClasspathSkillRepository: {}", cs.getResourcePath(), e);
+            }
+        }
+
+        for (SkillProperties.NacosSource ns : skillProperties.getNacos()) {
+            try {
+                AiService aiService = createNacosAiService(ns);
+                Properties props = new Properties();
+                if (ns.getSkillVersion() != null) {
+                    props.setProperty(
+                            NacosSkillRepository.SKILL_VERSION_PATH, ns.getSkillVersion());
+                }
+                if (ns.getSkillLabel() != null) {
+                    props.setProperty(NacosSkillRepository.SKILL_LABEL_PATH, ns.getSkillLabel());
+                }
+                repos.add(
+                        new NacosSkillRepository(
+                                aiService, ns.getNamespace(), props, ns.getSkillNames()));
+            } catch (Exception e) {
+                log.error(
+                        "Failed to create NacosSkillRepository for namespace '{}'",
+                        ns.getNamespace(),
+                        e);
             }
         }
 

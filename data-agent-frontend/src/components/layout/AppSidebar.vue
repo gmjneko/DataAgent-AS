@@ -18,13 +18,15 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
+  import { useUserStore } from '@/stores/user';
+  const user = useUserStore();
 
   const route = useRoute();
   const router = useRouter();
 
   const isCollapse = ref(false);
 
-  const menuItems = [
+  const menuItems = computed(() => [
     { path: '/chat', title: 'AI 智能分析' },
     { path: '/data-source', title: '数据源管理' },
     {
@@ -51,9 +53,10 @@
       children: [
         { path: '/system/user', title: '用户管理' },
         { path: '/system/role', title: '角色管理' },
+        ...(user.userInfo?.superAdmin ? [{ path: '/system/mcp', title: 'MCP 管理' }] : []),
       ],
     },
-  ];
+  ]);
 
   const activeMenu = computed(() => route.path);
 

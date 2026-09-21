@@ -48,6 +48,8 @@ public class McpServer {
 
     private String status;
     private String description;
+    private String enableTools;
+    private String disableTools;
     private Long creatorId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

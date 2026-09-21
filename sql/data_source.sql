@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
 
 CREATE TABLE IF NOT EXISTS `user_session` (
     `user_id`    INT          NOT NULL COMMENT '用户ID，关联 sys_user.id',
-    `session_id` VARCHAR(255) NOT NULL COMMENT '会话ID（对应 agentscope_sessions.session_id）',
+    `session_id` VARCHAR(255) NOT NULL COMMENT '业务会话ID，由 AgentScope 2.x 按用户隔离存储',
     `create_time` DATETIME    DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`user_id`, `session_id`),
     KEY `idx_session_id` (`session_id`)
@@ -246,6 +246,8 @@ CREATE TABLE IF NOT EXISTS `mcp_server` (
     `query_params` TEXT DEFAULT NULL COMMENT '查询参数',
     `timeout` BIGINT DEFAULT NULL COMMENT '超时时间',
     `initialization_timeout` BIGINT DEFAULT NULL COMMENT '初始化超时时间',
+    `enable_tools` TEXT DEFAULT NULL COMMENT '允许工具名称 JSON 数组，空表示全部',
+    `disable_tools` TEXT DEFAULT NULL COMMENT '禁用工具名称 JSON 数组',
     `enable_elicitation` TINYINT(1) DEFAULT NULL COMMENT '是否启用 elicitation',
     `http_version` VARCHAR(32) DEFAULT NULL COMMENT 'HTTP 版本',
     `connect_timeout` BIGINT DEFAULT NULL COMMENT '连接超时时间',
@@ -259,3 +261,14 @@ CREATE TABLE IF NOT EXISTS `mcp_server` (
     UNIQUE KEY `uk_mcp_server_name` (`name`),
     KEY `idx_mcp_server_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MCP Server 配置表';
+
+-- AgentScope Java 2.x state, isolated from legacy agentscope_sessions.
+CREATE TABLE IF NOT EXISTS `agentscope_agent_state` (
+    `session_id` VARCHAR(255) NOT NULL,
+    `state_key` VARCHAR(255) NOT NULL,
+    `item_index` INT NOT NULL DEFAULT 0,
+    `state_data` LONGTEXT NOT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`session_id`, `state_key`, `item_index`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

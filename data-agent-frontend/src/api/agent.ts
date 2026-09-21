@@ -34,6 +34,7 @@ export interface ToolCallInfo {
 }
 
 export interface ToolResultInfo {
+  suspended?: boolean;
   id: string;
   name: string;
   output: string;
@@ -223,4 +224,12 @@ export async function* streamChat(
   } finally {
     reader.releaseLock();
   }
+}
+
+export async function stopSession(sessionId: string): Promise<void> {
+  const response = await fetch(`/api/agent/session/${encodeURIComponent(sessionId)}/stop`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw await resolveApiError(response, '停止失败');
 }

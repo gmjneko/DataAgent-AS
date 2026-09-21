@@ -17,360 +17,143 @@
  */
 package io.github.malonetalk.agent;
 
-import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.message.ThinkingBlock;
-import io.agentscope.core.message.ToolResultBlock;
-import io.agentscope.core.message.ToolUseBlock;
-import io.agentscope.core.session.Session;
-import io.agentscope.core.session.mysql.MysqlSession;
-import io.agentscope.core.state.SessionKey;
-import io.agentscope.core.state.SimpleSessionKey;
+import io.agentscope.core.state.AgentState;
+import io.agentscope.core.state.AgentStateStore;
+import io.agentscope.harness.agent.HarnessAgent;
 import io.github.malonetalk.common.ErrorCode;
-import io.github.malonetalk.convertor.handler.ToolResultHandler;
-import io.github.malonetalk.dto.ChatStreamEvent;
-import io.github.malonetalk.dto.SessionDatasourceBinding;
 import io.github.malonetalk.dto.SessionInfo;
 import io.github.malonetalk.dto.TurnItem;
-import io.github.malonetalk.enums.ChatStreamEventType;
+import io.github.malonetalk.entity.UserSession;
 import io.github.malonetalk.exception.BusinessException;
 import io.github.malonetalk.mapper.SessionDatasourceMapper;
 import io.github.malonetalk.mapper.UserSessionMapper;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import javax.sql.DataSource;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
+@RequiredArgsConstructor
 public class SessionService {
-
-    private final DataSource dataSource;
+    private final ObjectProvider<HarnessAgent> agent;
+    private final SessionOperations operations;
+    private final AgentStateStore stateStore;
+    private final SessionTranscript transcript;
+    private final SessionHistory history;
     private final SessionDatasourceMapper sessionDatasourceMapper;
     private final UserSessionMapper userSessionMapper;
-    private final Map<String, Session> sessionCache = new ConcurrentHashMap<>();
 
-    public SessionService(
-            DataSource dataSource,
-            SessionDatasourceMapper sessionDatasourceMapper,
-            UserSessionMapper userSessionMapper) {
-        this.dataSource = dataSource;
-        this.sessionDatasourceMapper = sessionDatasourceMapper;
-        this.userSessionMapper = userSessionMapper;
-    }
-
-    public Session getOrCreateSession(String sessionId) {
-        return sessionCache.computeIfAbsent(sessionId, k -> createMysqlSession());
-    }
-
-    private MysqlSession createMysqlSession() {
-        return new MysqlSession(dataSource, "data_agent", "agentscope_sessions", false);
-    }
-
-    /** 声明会话归属（INSERT IGNORE），首次访问时由 chatStream 调用。 */
-    public void bindUserSession(int userId, String sessionId) {
+    public synchronized void bindUserSession(int userId, String sessionId) {
+        SessionTranscript.validateSessionId(sessionId);
+        Integer owner = userSessionMapper.selectOwner(sessionId);
+        if (owner != null && owner != userId) {
+            throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND);
+        }
         userSessionMapper.insertIgnore(userId, sessionId);
+        requireOwnership(userId, sessionId);
+    }
+
+    public int owner(String sessionId, Integer userId) {
+        SessionTranscript.validateSessionId(sessionId);
+        Integer owner = userSessionMapper.selectOwner(sessionId);
+        if (owner == null || (userId != null && !Objects.equals(owner, userId))) {
+            throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return owner;
     }
 
     public void requireOwnership(Integer userId, String sessionId) {
-        if (userId != null && !userSessionMapper.exists(userId, sessionId)) {
-            throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND);
-        }
+        owner(sessionId, userId);
     }
 
     public List<Msg> getSessionDebug(String sessionId, Integer userId) {
-        requireOwnership(userId, sessionId);
-        return loadMessages(sessionId);
+        int owner = owner(sessionId, userId);
+        return stateStore
+                .get(String.valueOf(owner), sessionId, "agent_state", AgentState.class)
+                .map(AgentState::getContext)
+                .orElse(List.of());
     }
 
     public List<TurnItem> getSessionHistory(String sessionId, Integer userId) {
-        requireOwnership(userId, sessionId);
-        return buildTurnItems(loadMessages(sessionId));
+        return history.buildTurnItems(
+                transcript.read(String.valueOf(owner(sessionId, userId)), sessionId));
     }
 
-    private List<Msg> loadMessages(String sessionId) {
-        Session session = getOrCreateSession(sessionId);
-        if (!session.exists(SimpleSessionKey.of(sessionId))) {
-            return Collections.emptyList();
-        }
-        return session.getList(SimpleSessionKey.of(sessionId), "memory_messages", Msg.class);
-    }
-
-    private List<TurnItem> buildTurnItems(List<Msg> messages) {
-        List<TurnItem> turns = new ArrayList<>();
-        List<ContentBlock> agentBlocks = null;
-
-        for (Msg msg : messages) {
-            boolean isUser = msg.getRole() == MsgRole.USER;
-            if (isUser) {
-                if (agentBlocks != null) {
-                    turns.add(buildAgentTurn(agentBlocks));
-                    agentBlocks = null;
-                }
-                String text =
-                        msg.getContent().stream()
-                                .filter(block -> block instanceof TextBlock)
-                                .map(block -> ((TextBlock) block).getText())
-                                .filter(t -> t != null && !t.isEmpty())
-                                .collect(Collectors.joining());
-                turns.add(new TurnItem(MsgRole.USER.name(), text, List.of(), List.of()));
-            } else {
-                if (agentBlocks == null) {
-                    agentBlocks = new ArrayList<>();
-                }
-                agentBlocks.addAll(msg.getContent());
-            }
-        }
-        if (agentBlocks != null) {
-            turns.add(buildAgentTurn(agentBlocks));
-        }
-
-        return turns;
-    }
-
-    private TurnItem buildAgentTurn(List<ContentBlock> blocks) {
-        StringBuilder content = new StringBuilder();
-        List<ChatStreamEvent> timeline = new ArrayList<>();
-
-        for (ContentBlock block : blocks) {
-            if (block instanceof TextBlock tb) {
-                if (tb.getText() != null && !tb.getText().isEmpty()) {
-                    content.append(tb.getText());
-                    timeline.add(
-                            ChatStreamEvent.builder()
-                                    .type(ChatStreamEventType.TEXT)
-                                    .content(tb.getText())
-                                    .build());
-                }
-            } else if (block instanceof ThinkingBlock tb) {
-                appendThinking(timeline, tb);
-            } else if (block instanceof ToolUseBlock tub) {
-                appendToolCall(timeline, tub);
-            } else if (block instanceof ToolResultBlock trb) {
-                appendToolResult(timeline, trb);
-            }
-        }
-
-        List<ChatStreamEvent> traceSteps =
-                timeline.stream()
-                        .filter(event -> event.type() != ChatStreamEventType.TEXT)
-                        .toList();
-        return new TurnItem(MsgRole.ASSISTANT.name(), content.toString(), traceSteps, timeline);
-    }
-
-    private void appendThinking(List<ChatStreamEvent> traceSteps, ThinkingBlock tb) {
-        String thinking = tb.getThinking();
-        if (thinking == null || thinking.isEmpty()) {
-            return;
-        }
-        int lastIdx = traceSteps.size() - 1;
-        if (lastIdx >= 0 && traceSteps.get(lastIdx).type() == ChatStreamEventType.THINKING) {
-            String merged =
-                    (traceSteps.get(lastIdx).content() != null
-                                    ? traceSteps.get(lastIdx).content()
-                                    : "")
-                            + thinking;
-            traceSteps.set(lastIdx, thinkingEvent(merged));
-        } else {
-            traceSteps.add(thinkingEvent(thinking));
-        }
-    }
-
-    private void appendToolCall(List<ChatStreamEvent> traceSteps, ToolUseBlock tub) {
-        traceSteps.add(
-                ChatStreamEvent.builder()
-                        .type(ChatStreamEventType.TOOL_CALL)
-                        .toolCall(
-                                new ChatStreamEvent.ToolCallInfo(
-                                        tub.getId(), tub.getName(), tub.getInput()))
-                        .build());
-    }
-
-    private void appendToolResult(List<ChatStreamEvent> traceSteps, ToolResultBlock trb) {
-        String outputText =
-                trb.getOutput().stream()
-                        .filter(b -> b instanceof TextBlock)
-                        .map(b -> ((TextBlock) b).getText())
-                        .filter(t -> t != null && !t.isEmpty())
-                        .collect(Collectors.joining("\n"));
-        traceSteps.add(ToolResultHandler.defaultHandle(trb, outputText, null, false));
-    }
-
-    private static ChatStreamEvent thinkingEvent(String thinking) {
-        return ChatStreamEvent.builder()
-                .type(ChatStreamEventType.THINKING)
-                .content(thinking)
-                .build();
-    }
-
-    @Transactional
     public void clearSession(String sessionId, Integer userId) {
-        requireOwnership(userId, sessionId);
-        doClearSession(sessionId);
+        operations.run(sessionId, () -> clearSessionState(sessionId, userId));
     }
 
-    private void doClearSession(String sessionId) {
-        Session session = sessionCache.remove(sessionId);
-        if (session == null) {
-            session = createMysqlSession();
-        }
-        session.delete(SimpleSessionKey.of(sessionId));
+    private void clearSessionState(String sessionId, Integer userId) {
+        String owner = String.valueOf(owner(sessionId, userId));
+        agent.getObject().clearContext(owner, sessionId);
+        stateStore.delete(owner, sessionId);
+        agent.getObject().clearStateCache(owner, sessionId);
+        transcript.delete(owner, sessionId);
         sessionDatasourceMapper.deleteBySessionId(sessionId);
         userSessionMapper.deleteBySessionId(sessionId);
     }
 
-    /**
-     * 清空全部会话：admin 清全量，普通用户清自己名下。
-     *
-     * @param userId null 表示 admin（清全量），非 null 表示指定用户
-     */
-    @Transactional
     public void clearAllSessions(Integer userId) {
-        if (userId == null) {
-            // admin: clear everything — query db for session IDs, not local cache
-            MysqlSession session = createMysqlSession();
-            Set<SessionKey> keys = session.listSessionKeys();
-            if (keys != null) {
-                for (SessionKey key : keys) {
-                    doClearSession(key.toIdentifier());
-                }
+        for (UserSession session : userSessionMapper.selectAll()) {
+            if (userId == null || Objects.equals(userId, session.getUserId())) {
+                clearSession(session.getSessionId(), userId);
             }
-            return;
         }
-
-        List<String> userSessionIds = userSessionMapper.selectSessionIdsByUserId(userId);
-        for (String sessionId : userSessionIds) {
-            sessionCache.remove(sessionId);
-            MysqlSession session = createMysqlSession();
-            session.delete(SimpleSessionKey.of(sessionId));
-            sessionDatasourceMapper.deleteBySessionId(sessionId);
-        }
-        userSessionMapper.deleteByUserId(userId);
     }
 
-    /**
-     * 列出会话列表。
-     *
-     * @param userId null 表示 admin（全量），非 null 表示只查该用户的会话
-     */
     public List<SessionInfo> listSessions(Integer userId) {
-        MysqlSession session = createMysqlSession();
-        Set<SessionKey> keys = session.listSessionKeys();
-
-        if (keys == null || keys.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        Set<String> visibleIds;
-        if (userId == null) {
-            visibleIds = keys.stream().map(SessionKey::toIdentifier).collect(Collectors.toSet());
-        } else {
-            visibleIds = new HashSet<>(userSessionMapper.selectSessionIdsByUserId(userId));
-        }
-
-        Map<String, String[]> timestamps = new HashMap<>();
-        try (Connection conn = dataSource.getConnection();
-                PreparedStatement ps =
-                        conn.prepareStatement(
-                                "SELECT session_id, MIN(created_at), MAX(updated_at)"
-                                        + " FROM agentscope_sessions GROUP BY session_id");
-                ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                timestamps.put(rs.getString(1), new String[] {rs.getString(2), rs.getString(3)});
-            }
-        } catch (Exception e) {
-            log.error("Error listing session timestamps", e);
-        }
-
-        Map<String, String[]> bindings = new HashMap<>();
-        for (SessionDatasourceBinding row :
-                sessionDatasourceMapper.listBindingsWithDatasourceName()) {
-            bindings.put(
-                    row.getSessionId(),
-                    new String[] {
-                        row.getDatasourceId() != null
-                                ? String.valueOf(row.getDatasourceId())
-                                : null,
-                        row.getDatasourceName()
-                    });
-        }
-
-        List<SessionInfo> result = new ArrayList<>();
-        for (SessionKey key : keys) {
-            String sid = key.toIdentifier();
-            if (!visibleIds.contains(sid)) {
-                continue;
-            }
-            List<Msg> messages = session.getList(key, "memory_messages", Msg.class);
-
-            String title = "";
-            if (messages != null) {
-                for (Msg msg : messages) {
-                    if (msg.getRole() == MsgRole.USER) {
-                        title = getTextContent(msg);
-                        if (title.length() > 30) {
-                            title = title.substring(0, 30);
-                        }
-                        break;
-                    }
-                }
-            }
-            if (title.isEmpty()) {
-                title = sid.length() > 20 ? sid.substring(0, 20) : sid;
-            }
-
-            String[] times = timestamps.getOrDefault(sid, new String[] {"", ""});
-            String[] binding = bindings.get(sid);
-            Integer datasourceId =
-                    binding == null || binding[0] == null ? null : Integer.valueOf(binding[0]);
-            String datasourceName = binding == null ? null : binding[1];
-            result.add(
-                    new SessionInfo(sid, title, times[0], times[1], datasourceId, datasourceName));
-        }
-
-        result.sort((a, b) -> b.lastActiveAt().compareTo(a.lastActiveAt()));
-        return result;
-    }
-
-    /**
-     * Extract text content from a message. Concatenates text from all
-     * text-containing blocks (TextBlock and ThinkingBlock).
-     */
-    private static String getTextContent(Msg msg) {
-        String thinking =
-                msg.getContent().stream()
-                        .filter(block -> block instanceof ThinkingBlock)
-                        .map(block -> ((ThinkingBlock) block).getThinking())
-                        .collect(Collectors.joining("\n"));
-
-        String text =
-                msg.getContent().stream()
-                        .filter(block -> block instanceof TextBlock)
-                        .map(block -> ((TextBlock) block).getText())
-                        .collect(Collectors.joining("\n"));
-
-        if (!thinking.isEmpty() && !text.isEmpty()) {
-            return thinking + "\n\n" + text;
-        } else if (!thinking.isEmpty()) {
-            return thinking;
-        } else if (!text.isEmpty()) {
-            return text;
-        } else {
-            return "[No response]";
-        }
+        var bindings = sessionDatasourceMapper.listBindingsWithDatasourceName();
+        return userSessionMapper.selectAll().stream()
+                .filter(session -> userId == null || Objects.equals(userId, session.getUserId()))
+                .filter(
+                        session ->
+                                stateStore.exists(
+                                        String.valueOf(session.getUserId()),
+                                        session.getSessionId()))
+                .map(
+                        session -> {
+                            String id = session.getSessionId();
+                            String uid = String.valueOf(session.getUserId());
+                            List<Msg> messages = transcript.read(uid, id);
+                            String title =
+                                    messages.stream()
+                                            .filter(msg -> msg.getRole() == MsgRole.USER)
+                                            .flatMap(msg -> msg.getContent().stream())
+                                            .filter(TextBlock.class::isInstance)
+                                            .map(TextBlock.class::cast)
+                                            .map(TextBlock::getText)
+                                            .findFirst()
+                                            .orElse(id);
+                            String created = session.getCreateTime().toString();
+                            String updated = created;
+                            try {
+                                updated =
+                                        Files.getLastModifiedTime(transcript.path(uid, id))
+                                                .toInstant()
+                                                .toString();
+                            } catch (IOException ignored) {
+                                /* No transcript yet. */
+                            }
+                            var binding =
+                                    bindings.stream()
+                                            .filter(row -> id.equals(row.getSessionId()))
+                                            .findFirst();
+                            return new SessionInfo(
+                                    id,
+                                    title.substring(0, Math.min(title.length(), 30)),
+                                    created,
+                                    updated,
+                                    binding.map(row -> row.getDatasourceId()).orElse(null),
+                                    binding.map(row -> row.getDatasourceName()).orElse(null));
+                        })
+                .sorted(Comparator.comparing(SessionInfo::lastActiveAt).reversed())
+                .toList();
     }
 }

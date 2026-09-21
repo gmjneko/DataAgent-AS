@@ -17,10 +17,12 @@
  */
 package io.github.malonetalk.controller;
 
+import io.github.malonetalk.agent.mcp.McpToolRegistryService;
 import io.github.malonetalk.annotation.RequirePermission;
 import io.github.malonetalk.common.ErrorCode;
 import io.github.malonetalk.common.Result;
 import io.github.malonetalk.convertor.McpServerConverter;
+import io.github.malonetalk.dto.McpRuntimeStatus;
 import io.github.malonetalk.dto.McpServerRequest;
 import io.github.malonetalk.dto.McpServerResponse;
 import io.github.malonetalk.entity.McpServer;
@@ -47,6 +49,7 @@ public class McpServerController {
 
     private final McpServerService mcpServerService;
     private final McpServerConverter mcpServerConverter;
+    private final McpToolRegistryService registry;
 
     @GetMapping
     public Result<List<McpServerResponse>> findAll() {
@@ -124,6 +127,38 @@ public class McpServerController {
         List<McpServerResponse> responses =
                 list.stream().map(mcpServerConverter::toResponse).toList();
         return Result.success(responses);
+    }
+
+    @GetMapping("/{id}/connection")
+    public Result<McpRuntimeStatus> connection(@PathVariable Integer id) {
+        requireMcpServer(id);
+        return Result.success(registry.status(id));
+    }
+
+    @PostMapping({"/{id}/connect", "/{id}/refresh"})
+    public Result<McpRuntimeStatus> connect(@PathVariable Integer id) {
+        McpServer server = requireMcpServer(id);
+        if (!Status.ACTIVE.getCode().equals(server.getStatus())) {
+            throw BusinessException.of(ErrorCode.BAD_REQUEST, "请先启用 MCP Server");
+        }
+        return Result.success(registry.refresh(server));
+    }
+
+    @PostMapping("/{id}/disconnect")
+    public Result<McpRuntimeStatus> disconnect(@PathVariable Integer id) {
+        requireMcpServer(id);
+        return Result.success(registry.disconnect(id));
+    }
+
+    @PostMapping("/{id}/test")
+    public Result<McpRuntimeStatus> test(@PathVariable Integer id) {
+        return Result.success(registry.test(requireMcpServer(id)));
+    }
+
+    @GetMapping("/{id}/tools")
+    public Result<List<McpRuntimeStatus.ToolInfo>> tools(@PathVariable Integer id) {
+        requireMcpServer(id);
+        return Result.success(registry.status(id).discoveredTools());
     }
 
     private McpServer requireMcpServer(Integer id) {

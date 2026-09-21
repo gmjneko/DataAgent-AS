@@ -16,9 +16,8 @@
  */
 
 import { ref, shallowRef } from 'vue';
-import { streamChat, fetchSessionHistory } from '@/api/agent';
+import { streamChat, fetchSessionHistory, stopSession } from '@/api/agent';
 import { appendTimeline, restoreTimeline, type TimelineEvent } from '@/utils/chatTimeline';
-import { isInteractiveTool } from '@/utils/interactiveTools';
 import { parsePendingQuestion, type PendingQuestion } from '@/utils/agentQuestions';
 
 export interface ChatMessage {
@@ -89,8 +88,23 @@ export function useAgentChat(initialSessionId?: string) {
     stopStreaming();
     messages.value = [];
     sessionId.value = sid;
+    pendingQuestion.value = null;
 
     const turns = await fetchSessionHistory(sid);
+    if (sessionId.value !== sid) return;
+    for (const turn of turns) {
+      for (const event of turn.timeline ?? turn.traceSteps) {
+        if (event.type === 'question') {
+          pendingQuestion.value = parsePendingQuestion(event);
+        }
+        if (
+          event.toolResult &&
+          !event.toolResult.suspended &&
+          event.toolResult.id === pendingQuestion.value?.toolCallId
+        )
+          pendingQuestion.value = null;
+      }
+    }
     messages.value = turns.map(turn => ({
       id: nextId(),
       role: (turn.role === 'USER' ? 'user' : 'agent') as 'user' | 'agent',
@@ -151,11 +165,12 @@ export function useAgentChat(initialSessionId?: string) {
           }
 
           if (
+            event.type === 'question' ||
             event.type === 'tool_call' ||
             event.type === 'tool_result' ||
             event.type === 'report'
           ) {
-            if (event.type === 'tool_call' && isInteractiveTool(event.toolCall?.name)) {
+            if (event.type === 'question') {
               pendingQuestion.value = parsePendingQuestion(event);
             }
 
@@ -189,11 +204,15 @@ export function useAgentChat(initialSessionId?: string) {
   }
 
   function stopStreaming() {
-    abortController.value?.abort();
+    if (abortController.value) {
+      void stopSession(sessionId.value).catch(() => {});
+      abortController.value.abort();
+    }
   }
 
   function clearMessages() {
     messages.value = [];
+    pendingQuestion.value = null;
   }
 
   function newSession() {
