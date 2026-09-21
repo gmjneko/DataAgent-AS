@@ -22,5 +22,9 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 /** 更新用户。roleId 为 null 表示不修改角色。 */
 public record UserUpdateRequest(
-        @NotBlank(message = "displayName 不能为空") String displayName,
-        @PositiveOrZero(message = "roleId 不能为负") Integer roleId) {}
+        @NotBlank(message = "displayName 不能为空")
+        String displayName,
+        @PositiveOrZero(message = "roleId 不能为负")
+        Integer roleId
+) {
+}

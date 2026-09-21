@@ -29,7 +29,9 @@ import io.github.malonetalk.exception.BusinessException;
 import io.github.malonetalk.service.semantic.DomainService;
 import io.github.malonetalk.utils.RequestAssert;
 import jakarta.validation.Valid;
+
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,10 +63,12 @@ public class DomainController {
     @GetMapping("/{id}")
     public Result<DomainInfo> findById(@PathVariable Integer id) {
         requireNonNegativeId(id);
+
         DomainInfo domain = domainService.findById(id);
         if (domain == null) {
             throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND, "Domain not found.");
         }
+
         return Result.success(domain);
     }
 
@@ -74,16 +78,18 @@ public class DomainController {
     }
 
     @PutMapping("/{id}")
-    public Result<DomainInfo> update(
-            @PathVariable Integer id, @Valid @RequestBody DomainUpdateRequest request) {
+    public Result<DomainInfo> update(@PathVariable Integer id, @Valid @RequestBody DomainUpdateRequest request) {
         requireNonNegativeId(id);
+
         return Result.success(domainService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable Integer id) {
         requireNonNegativeId(id);
+
         domainService.delete(id);
+
         return Result.success(true);
     }
 

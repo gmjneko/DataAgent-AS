@@ -24,4 +24,6 @@ public record SessionInfo(
         String createdAt,
         String lastActiveAt,
         Integer datasourceId,
-        String datasourceName) {}
+        String datasourceName
+) {
+}

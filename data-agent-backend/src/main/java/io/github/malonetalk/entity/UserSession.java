@@ -27,4 +27,5 @@ public class UserSession {
     private Integer userId;
     private String sessionId;
     private LocalDateTime createTime;
+
 }

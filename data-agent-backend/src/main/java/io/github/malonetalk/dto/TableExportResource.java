@@ -17,4 +17,8 @@
  */
 package io.github.malonetalk.dto;
 
-public record TableExportResource(String fileName, byte[] content) {}
+public record TableExportResource(
+        String fileName,
+        byte[] content
+) {
+}

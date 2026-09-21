@@ -33,4 +33,6 @@ public record MetricResponse(
         String timeField,
         String description,
         LocalDateTime createTime,
-        LocalDateTime updateTime) {}
+        LocalDateTime updateTime
+) {
+}

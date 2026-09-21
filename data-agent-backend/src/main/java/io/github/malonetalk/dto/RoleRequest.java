@@ -19,4 +19,9 @@ package io.github.malonetalk.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record RoleRequest(@NotBlank(message = "name 不能为空") String name, String description) {}
+public record RoleRequest(
+        @NotBlank(message = "name 不能为空")
+        String name,
+        String description
+) {
+}

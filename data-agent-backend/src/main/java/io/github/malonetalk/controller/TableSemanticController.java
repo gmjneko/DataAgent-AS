@@ -29,7 +29,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -50,26 +52,22 @@ public class TableSemanticController {
     private final TableSemanticService tableSemanticService;
 
     @GetMapping
-    public Result<PageResponse<TableSemanticResponse>> findAllTables(
-            @Valid TableSemanticPageQuery query) {
+    public Result<PageResponse<TableSemanticResponse>> findAllTables(@Valid TableSemanticPageQuery query) {
         return Result.success(tableSemanticService.getTablePage(query));
     }
 
     @GetMapping("/names")
-    public Result<List<String>> listTableNames(
-            @RequestParam @NotNull @Min(1) Integer datasourceId) {
+    public Result<List<String>> listTableNames(@RequestParam @NotNull @Min(1) Integer datasourceId) {
         return Result.success(tableSemanticService.listTableNames(datasourceId));
     }
 
     @GetMapping("/domains")
-    public Result<List<String>> listTableDomains(
-            @RequestParam @NotNull @Min(1) Integer datasourceId) {
+    public Result<List<String>> listTableDomains(@RequestParam @NotNull @Min(1) Integer datasourceId) {
         return Result.success(tableSemanticService.listAvailableDomains(datasourceId));
     }
 
     @PutMapping
-    public Result<Boolean> updateTableSemantic(
-            @Valid @RequestBody TableSemanticUpdateRequest request) {
+    public Result<Boolean> updateTableSemantic(@Valid @RequestBody TableSemanticUpdateRequest request) {
         tableSemanticService.updateTableSemantic(request);
         return Result.success(true);
     }
@@ -77,16 +75,16 @@ public class TableSemanticController {
     @DeleteMapping
     public Result<Boolean> resetTableSemantic(
             @RequestParam @NotNull @Min(1) Integer datasourceId,
-            @RequestParam @NotBlank String tableName) {
+            @RequestParam @NotBlank String tableName
+    ) {
         tableSemanticService.resetTableSemantic(datasourceId, tableName);
         return Result.success(true);
     }
 
     @DeleteMapping("/batch")
-    public Result<Integer> resetTableSemantics(
-            @Valid @RequestBody BatchResetTableSemanticRequest request) {
+    public Result<Integer> resetTableSemantics(@Valid @RequestBody BatchResetTableSemanticRequest request) {
         return Result.success(
-                tableSemanticService.resetTableSemantics(
-                        request.datasourceId(), request.tableNames()));
+                tableSemanticService.resetTableSemantics(request.datasourceId(), request.tableNames())
+        );
     }
 }

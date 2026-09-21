@@ -30,7 +30,9 @@ import io.github.malonetalk.mapper.SysUserMapper;
 import io.github.malonetalk.utils.JwtUtil;
 import io.github.malonetalk.utils.PasswordUtil;
 import jakarta.validation.Valid;
+
 import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,24 +70,26 @@ public class AuthController {
             throw BusinessException.of(ErrorCode.UNAUTHORIZED, "账号已禁用，请联系管理员");
         }
         String token = jwtUtil.generate(user.getId());
-        UserInfoResponse info =
-                new UserInfoResponse(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getDisplayName(),
-                        Boolean.TRUE.equals(user.getSuperAdmin()));
+        UserInfoResponse info = new UserInfoResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getDisplayName(),
+                Boolean.TRUE.equals(user.getSuperAdmin())
+        );
+
         return Result.success(new LoginResponse(token, info));
     }
 
     @GetMapping("/me")
     public Result<UserInfoResponse> me() {
         UserContext context = UserContext.require();
-        return Result.success(
-                new UserInfoResponse(
-                        context.userId(),
-                        context.username(),
-                        context.displayName(),
-                        Boolean.TRUE.equals(context.superAdmin())));
+
+        return Result.success(new UserInfoResponse(
+                context.userId(),
+                context.username(),
+                context.displayName(),
+                Boolean.TRUE.equals(context.superAdmin()))
+        );
     }
 
     @PostMapping("/change-password")
@@ -94,11 +98,14 @@ public class AuthController {
         SysUser user = sysUserMapper.selectById(userId);
         if (user == null
                 || user.getPasswordHash() == null
-                || !PasswordUtil.verify(request.oldPassword(), user.getPasswordHash())) {
+                || !PasswordUtil.verify(request.oldPassword(), user.getPasswordHash())
+        ) {
             throw BusinessException.of(ErrorCode.BAD_REQUEST, "旧密码不正确");
         }
         sysUserMapper.updatePassword(
-                userId, PasswordUtil.hash(request.newPassword()), LocalDateTime.now());
+                userId, PasswordUtil.hash(request.newPassword()), LocalDateTime.now()
+        );
+
         return Result.success(true);
     }
 }

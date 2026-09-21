@@ -23,4 +23,6 @@ public record TurnItem(
         String role,
         String content,
         List<ChatStreamEvent> traceSteps,
-        List<ChatStreamEvent> timeline) {}
+        List<ChatStreamEvent> timeline
+) {
+}

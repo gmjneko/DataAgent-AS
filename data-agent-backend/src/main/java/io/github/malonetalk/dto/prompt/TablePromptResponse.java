@@ -18,13 +18,18 @@
 package io.github.malonetalk.dto.prompt;
 
 import java.util.List;
+
 import lombok.Builder;
 
-/** Agent-facing DTO for LLM prompt formatting. */
+/**
+ * Agent-facing DTO for LLM prompt formatting.
+ */
 @Builder
 public record TablePromptResponse(
         String name,
         String domain,
         String description,
         String dataGranularity,
-        List<TableRelationPromptResponse> relations) {}
+        List<TableRelationPromptResponse> relations
+) {
+}

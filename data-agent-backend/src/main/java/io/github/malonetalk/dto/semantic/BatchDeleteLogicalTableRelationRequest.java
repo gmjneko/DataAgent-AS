@@ -19,8 +19,13 @@ package io.github.malonetalk.dto.semantic;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 public record BatchDeleteLogicalTableRelationRequest(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId,
-        @NotEmpty(message = "relationIds 不能为空") List<Integer> relationIds) {}
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId,
+        @NotEmpty(message = "relationIds 不能为空")
+        List<Integer> relationIds
+) {
+}

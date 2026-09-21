@@ -19,4 +19,8 @@ package io.github.malonetalk.dto;
 
 import java.util.List;
 
-public record TablePermissionResponse(Integer datasourceId, List<String> tableNames) {}
+public record TablePermissionResponse(
+        Integer datasourceId,
+        List<String> tableNames
+) {
+}

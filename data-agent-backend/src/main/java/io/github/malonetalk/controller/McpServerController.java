@@ -30,7 +30,9 @@ import io.github.malonetalk.enums.Status;
 import io.github.malonetalk.exception.BusinessException;
 import io.github.malonetalk.service.McpServerService;
 import jakarta.validation.Valid;
+
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,8 +56,10 @@ public class McpServerController {
     @GetMapping
     public Result<List<McpServerResponse>> findAll() {
         List<McpServer> list = mcpServerService.findAll();
-        List<McpServerResponse> responses =
-                list.stream().map(mcpServerConverter::toResponse).toList();
+        List<McpServerResponse> responses = list.stream()
+                .map(mcpServerConverter::toResponse)
+                .toList();
+
         return Result.success(responses);
     }
 
@@ -79,7 +83,8 @@ public class McpServerController {
 
     @PutMapping("/{id}")
     public Result<McpServerResponse> update(
-            @PathVariable Integer id, @Valid @RequestBody McpServerRequest request) {
+            @PathVariable Integer id, @Valid @RequestBody McpServerRequest request
+    ) {
         McpServer existing = requireMcpServer(id);
         McpServer nameConflict = mcpServerService.findByName(request.name());
         if (nameConflict != null && !id.equals(nameConflict.getId())) {
@@ -92,6 +97,7 @@ public class McpServerController {
 
         requireOperationSuccess(
                 mcpServerService.update(mcpServer), "Failed to update the MCP server.");
+
         return Result.success(mcpServerConverter.toResponse(mcpServer));
     }
 
@@ -99,7 +105,10 @@ public class McpServerController {
     public Result<Boolean> deleteById(@PathVariable Integer id) {
         requireMcpServer(id);
         requireOperationSuccess(
-                mcpServerService.deleteById(id), "Failed to delete the MCP server.");
+                mcpServerService.deleteById(id),
+                "Failed to delete the MCP server."
+        );
+
         return Result.success(true);
     }
 
@@ -107,8 +116,12 @@ public class McpServerController {
     public Result<Boolean> enable(@PathVariable Integer id) {
         McpServer mcpServer = requireMcpServer(id);
         mcpServer.setStatus(Status.ACTIVE.getCode());
+
         requireOperationSuccess(
-                mcpServerService.update(mcpServer), "Failed to enable the MCP server.");
+                mcpServerService.update(mcpServer),
+                "Failed to enable the MCP server."
+        );
+
         return Result.success(true);
     }
 
@@ -116,16 +129,22 @@ public class McpServerController {
     public Result<Boolean> disable(@PathVariable Integer id) {
         McpServer mcpServer = requireMcpServer(id);
         mcpServer.setStatus(Status.INACTIVE.getCode());
+
         requireOperationSuccess(
-                mcpServerService.update(mcpServer), "Failed to disable the MCP server.");
+                mcpServerService.update(mcpServer),
+                "Failed to disable the MCP server."
+        );
+
         return Result.success(true);
     }
 
     @GetMapping("/status/{status}")
     public Result<List<McpServerResponse>> findByStatus(@PathVariable String status) {
         List<McpServer> list = mcpServerService.findByStatus(status);
-        List<McpServerResponse> responses =
-                list.stream().map(mcpServerConverter::toResponse).toList();
+        List<McpServerResponse> responses = list.stream()
+                .map(mcpServerConverter::toResponse)
+                .toList();
+
         return Result.success(responses);
     }
 
@@ -141,6 +160,7 @@ public class McpServerController {
         if (!Status.ACTIVE.getCode().equals(server.getStatus())) {
             throw BusinessException.of(ErrorCode.BAD_REQUEST, "请先启用 MCP Server");
         }
+
         return Result.success(registry.refresh(server));
     }
 
@@ -166,6 +186,7 @@ public class McpServerController {
         if (mcpServer == null) {
             throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND, "MCP server not found.");
         }
+
         return mcpServer;
     }
 

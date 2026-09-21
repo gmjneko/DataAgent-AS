@@ -18,4 +18,8 @@
 package io.github.malonetalk.dto.prompt;
 
 /** Agent-facing DTO for domain selection. */
-public record DomainPromptResponse(String name, String description) {}
+public record DomainPromptResponse(
+        String name,
+        String description
+) {
+}

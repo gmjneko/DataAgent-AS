@@ -26,4 +26,6 @@ public record UserResponse(
         Integer roleId,
         Boolean superAdmin,
         Integer status,
-        LocalDateTime createTime) {}
+        LocalDateTime createTime
+) {
+}

@@ -33,9 +33,11 @@ import io.github.malonetalk.mapper.ColumnSemanticInfoMapper;
 import io.github.malonetalk.mapper.TableInfoMapper;
 import io.github.malonetalk.service.DatasourceService;
 import jakarta.validation.Valid;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,8 +70,10 @@ public class DatasourceController {
 
     @GetMapping
     public Result<List<DatasourceResponse>> findAll() {
-        List<DatasourceResponse> list =
-                dataSourceService.findAll().stream().map(datasourceConverter::toResponse).toList();
+        List<DatasourceResponse> list = dataSourceService.findAll().stream()
+                .map(datasourceConverter::toResponse)
+                .toList();
+
         return Result.success(list);
     }
 
@@ -78,30 +82,37 @@ public class DatasourceController {
         return Result.success(datasourceConverter.toResponse(requireDatasource(id)));
     }
 
-    /** 返回某数据源下的所有物理表名，供权限配置页使用。 */
+    /**
+     * 返回某数据源下的所有物理表名，供权限配置页使用。
+     */
     @RequirePermission
     @GetMapping("/{id}/tables")
     public Result<List<String>> listTableNames(@PathVariable Integer id) {
         requireDatasource(id);
-        List<String> tables =
-                tableInfoMapper.selectByDatasourceId(id).stream()
-                        .map(TableInfo::getTableName)
-                        .toList();
+
+        List<String> tables = tableInfoMapper.selectByDatasourceId(id).stream()
+                .map(TableInfo::getTableName)
+                .toList();
+
         return Result.success(tables);
     }
 
-    /** 返回某数据源下所有表的列名，一次查询，供列级权限配置使用。 */
+    /**
+     * 返回某数据源下所有表的列名，一次查询，供列级权限配置使用。
+     */
     @RequirePermission
     @GetMapping("/{id}/columns")
     public Result<Map<String, List<String>>> listAllColumns(@PathVariable Integer id) {
         requireDatasource(id);
-        Map<String, List<String>> map =
-                columnSemanticInfoMapper.selectByDatasourceId(id).stream()
-                        .collect(
-                                Collectors.groupingBy(
-                                        ColumnInfo::getTableName,
-                                        Collectors.mapping(
-                                                ColumnInfo::getColumnName, Collectors.toList())));
+
+        Map<String, List<String>> map = columnSemanticInfoMapper.selectByDatasourceId(id).stream()
+                .collect(
+                        Collectors.groupingBy(
+                                ColumnInfo::getTableName,
+                                Collectors.mapping(ColumnInfo::getColumnName, Collectors.toList())
+                        )
+                );
+
         return Result.success(map);
     }
 
@@ -109,19 +120,23 @@ public class DatasourceController {
     @PostMapping
     public Result<Boolean> save(@Valid @RequestBody DatasourceRequest request) {
         DataSourceType type = requireDatasourceType(request.type());
+
         Datasource datasource = datasourceConverter.toEntity(request);
         datasource.setType(type.getCode());
         datasource.setStatus(Status.INACTIVE.getCode());
+
         requireOperationSuccess(
-                dataSourceService.save(datasource), "Failed to save the datasource.");
+                dataSourceService.save(datasource), "Failed to save the datasource."
+        );
+
         return Result.success();
     }
 
     @RequirePermission
     @PutMapping("/{id}")
-    public Result<Boolean> update(
-            @PathVariable Integer id, @Valid @RequestBody DatasourceRequest request) {
+    public Result<Boolean> update(@PathVariable Integer id, @Valid @RequestBody DatasourceRequest request) {
         DataSourceType type = requireDatasourceType(request.type());
+
         Datasource datasource = requireDatasource(id);
         datasource.setName(request.name());
         datasource.setType(type.getCode());
@@ -134,8 +149,12 @@ public class DatasourceController {
         }
         datasource.setConnectionUrl(request.connectionUrl());
         datasource.setDescription(request.description());
+
         requireOperationSuccess(
-                dataSourceService.update(datasource), "Failed to update the datasource.");
+                dataSourceService.update(datasource),
+                "Failed to update the datasource."
+        );
+
         return Result.success(true);
     }
 
@@ -144,25 +163,28 @@ public class DatasourceController {
     public Result<Boolean> deleteById(@PathVariable Integer id) {
         requireDatasource(id);
         requireOperationSuccess(
-                dataSourceService.deleteById(id), "Failed to delete the datasource.");
+                dataSourceService.deleteById(id),
+                "Failed to delete the datasource."
+        );
+
         return Result.success(true);
     }
 
     @GetMapping("/status/{status}")
     public Result<List<DatasourceResponse>> findByStatus(@PathVariable String status) {
-        List<DatasourceResponse> list =
-                dataSourceService.findByStatus(status).stream()
-                        .map(datasourceConverter::toResponse)
-                        .toList();
+        List<DatasourceResponse> list = dataSourceService.findByStatus(status).stream()
+                .map(datasourceConverter::toResponse)
+                .toList();
+
         return Result.success(list);
     }
 
     @GetMapping("/type/{type}")
     public Result<List<DatasourceResponse>> findByType(@PathVariable String type) {
-        List<DatasourceResponse> list =
-                dataSourceService.findByType(type).stream()
-                        .map(datasourceConverter::toResponse)
-                        .toList();
+        List<DatasourceResponse> list = dataSourceService.findByType(type).stream()
+                .map(datasourceConverter::toResponse)
+                .toList();
+
         return Result.success(list);
     }
 
@@ -172,7 +194,9 @@ public class DatasourceController {
         requireDatasource(id);
         requireOperationSuccess(
                 dataSourceService.updateStatus(id, Status.ACTIVE.getCode()),
-                "Failed to activate the datasource.");
+                "Failed to activate the datasource."
+        );
+
         return Result.success(true);
     }
 
@@ -182,7 +206,8 @@ public class DatasourceController {
         requireDatasource(id);
         requireOperationSuccess(
                 dataSourceService.updateStatus(id, Status.INACTIVE.getCode()),
-                "Failed to deactivate the datasource.");
+                "Failed to deactivate the datasource."
+        );
         return Result.success(true);
     }
 
@@ -191,16 +216,16 @@ public class DatasourceController {
         if (datasource == null) {
             throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND, "Datasource not found.");
         }
+
         return datasource;
     }
 
     private DataSourceType requireDatasourceType(String type) {
         return DataSourceType.fromCode(type)
-                .orElseThrow(
-                        () ->
-                                BusinessException.of(
-                                        ErrorCode.UNSUPPORTED_DATASOURCE_TYPE,
-                                        "Unsupported datasource type: " + type));
+                .orElseThrow(() -> BusinessException.of(
+                        ErrorCode.UNSUPPORTED_DATASOURCE_TYPE,
+                        "Unsupported datasource type: " + type)
+                );
     }
 
     private void requireOperationSuccess(boolean success, String message) {

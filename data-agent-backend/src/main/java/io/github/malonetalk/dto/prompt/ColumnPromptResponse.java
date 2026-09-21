@@ -18,9 +18,12 @@
 package io.github.malonetalk.dto.prompt;
 
 import io.github.malonetalk.enums.ColumnSemanticType;
+
 import lombok.Builder;
 
-/** Agent-facing DTO for LLM prompt formatting. */
+/**
+ * Agent-facing DTO for LLM prompt formatting.
+ */
 @Builder
 public record ColumnPromptResponse(
         String name,
@@ -28,4 +31,6 @@ public record ColumnPromptResponse(
         ColumnSemanticType semanticType,
         Boolean primaryKey,
         String description,
-        String indexInfo) {}
+        String indexInfo
+) {
+}

@@ -24,10 +24,14 @@ import jakarta.validation.constraints.NotBlank;
  * 避免实体直收请求体导致的越权赋值(over-posting)。
  */
 public record MetricRequest(
-        @NotBlank(message = "metricKey 不能为空") String metricKey,
-        @NotBlank(message = "name 不能为空") String name,
+        @NotBlank(message = "metricKey 不能为空")
+        String metricKey,
+        @NotBlank(message = "name 不能为空")
+        String name,
         String aliases,
         String measureExpr,
         String filters,
         String timeField,
-        String description) {}
+        String description
+) {
+}

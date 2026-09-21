@@ -18,7 +18,12 @@
 package io.github.malonetalk.dto;
 
 import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 public record SaveTablePermissionRequest(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId, List<String> tableNames) {}
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId,
+        List<String> tableNames
+) {
+}

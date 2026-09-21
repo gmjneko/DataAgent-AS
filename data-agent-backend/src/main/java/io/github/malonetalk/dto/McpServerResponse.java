@@ -21,9 +21,11 @@ import io.github.malonetalk.enums.ClientType;
 import io.github.malonetalk.enums.HttpVersion;
 import io.github.malonetalk.enums.RedirectPolicy;
 import io.github.malonetalk.enums.TransportType;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+
 import lombok.Builder;
 
 @Builder
@@ -49,4 +51,6 @@ public record McpServerResponse(
         LocalDateTime createTime,
         LocalDateTime updateTime,
         List<String> enableTools,
-        List<String> disableTools) {}
+        List<String> disableTools
+) {
+}

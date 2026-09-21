@@ -23,9 +23,15 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 public record UserCreateRequest(
-        @NotBlank(message = "username 不能为空") String username,
+        @NotBlank(message = "username 不能为空")
+        String username,
         @NotBlank(message = "password 不能为空")
-                @Size(min = 6, max = 64, message = "password 长度需在 6-64 之间")
-                String password,
-        @NotBlank(message = "displayName 不能为空") String displayName,
-        @NotNull @PositiveOrZero(message = "roleId 不能为负") Integer roleId) {}
+        @Size(min = 6, max = 64, message = "password 长度需在 6-64 之间")
+        String password,
+        @NotBlank(message = "displayName 不能为空")
+        String displayName,
+        @NotNull
+        @PositiveOrZero(message = "roleId 不能为负")
+        Integer roleId
+) {
+}

@@ -22,10 +22,12 @@ import lombok.Data;
 
 @Data
 public class RoleHiddenColumn {
+
     private Integer id;
     private Integer roleId;
     private Integer datasourceId;
     private String tableName;
     private String columnName;
     private LocalDateTime createTime;
+
 }

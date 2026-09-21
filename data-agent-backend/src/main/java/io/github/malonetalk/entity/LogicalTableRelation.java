@@ -36,4 +36,5 @@ public class LogicalTableRelation {
     private Boolean isEnabled;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
 }

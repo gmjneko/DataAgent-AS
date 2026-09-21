@@ -21,7 +21,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import io.github.malonetalk.common.ErrorCode;
 import io.github.malonetalk.exception.BusinessException;
+
 import java.util.Arrays;
+
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -48,10 +50,10 @@ public enum LogicalTableRelationType {
         return Arrays.stream(values())
                 .filter(value -> value.code.equalsIgnoreCase(code))
                 .findFirst()
-                .orElseThrow(
-                        () ->
-                                BusinessException.of(
-                                        ErrorCode.INVALID_RELATION_TYPE,
-                                        "Unknown relationType: " + code));
+                .orElseThrow(() ->
+                        BusinessException.of(
+                                ErrorCode.INVALID_RELATION_TYPE,
+                                "Unknown relationType: " + code)
+                );
     }
 }

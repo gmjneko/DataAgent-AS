@@ -20,5 +20,9 @@ package io.github.malonetalk.dto;
 import jakarta.validation.constraints.NotBlank;
 
 public record DomainCreateRequest(
-        @NotBlank(message = "领域名称不能为空") String name,
-        @NotBlank(message = "域描述不能为空") String description) {}
+        @NotBlank(message = "领域名称不能为空")
+        String name,
+        @NotBlank(message = "域描述不能为空")
+        String description
+) {
+}

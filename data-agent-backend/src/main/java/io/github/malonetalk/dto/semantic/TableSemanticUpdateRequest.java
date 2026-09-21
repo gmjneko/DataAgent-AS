@@ -21,9 +21,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record TableSemanticUpdateRequest(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId,
-        @NotBlank(message = "tableName 不能为空") String tableName,
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId,
+        @NotBlank(message = "tableName 不能为空")
+        String tableName,
         String domain,
         String tableDescription,
         String dataGranularity,
-        @NotNull(message = "isVisible 不能为空") Boolean isVisible) {}
+        @NotNull(message = "isVisible 不能为空")
+        Boolean isVisible
+) {
+}

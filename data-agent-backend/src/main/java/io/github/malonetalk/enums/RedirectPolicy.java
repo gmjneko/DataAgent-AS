@@ -18,16 +18,16 @@
 package io.github.malonetalk.enums;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
+@Getter
 @AllArgsConstructor
 public enum RedirectPolicy {
+
     FOLLOW("follow"),
     NEVER("never"),
     ERROR("error");
 
     private final String code;
 
-    public String getCode() {
-        return code;
-    }
 }

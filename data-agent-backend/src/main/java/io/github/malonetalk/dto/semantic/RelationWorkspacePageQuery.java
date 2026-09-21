@@ -22,9 +22,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record RelationWorkspacePageQuery(
-        @NotNull @Min(1) Integer datasourceId,
-        @Min(1) Integer page,
-        @Min(1) Integer pageSize,
+        @NotNull @Min(1)
+        Integer datasourceId,
+        @Min(1)
+        Integer page,
+        @Min(1)
+        Integer pageSize,
         String keyword,
         @Pattern(regexp = "^(?i)(asc|desc)$", message = "sortOrder must be asc or desc.")
-                String sortOrder) {}
+        String sortOrder
+) {
+}

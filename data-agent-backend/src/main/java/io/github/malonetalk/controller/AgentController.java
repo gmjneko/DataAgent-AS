@@ -28,7 +28,9 @@ import io.github.malonetalk.dto.ChatStreamEvent;
 import io.github.malonetalk.dto.SessionInfo;
 import io.github.malonetalk.dto.TurnItem;
 import jakarta.validation.Valid;
+
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -52,24 +54,23 @@ public class AgentController {
     private final SessionService sessionService;
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<ChatStreamEvent>> chatStream(
-            @Valid @RequestBody ChatRequest request) {
+    public Flux<ServerSentEvent<ChatStreamEvent>> chatStream(@Valid @RequestBody ChatRequest request) {
         // Read userId before Reactor switches threads.
         int userId = UserContext.require().userId();
+
         log.info("SSE chat stream started: sessionId={}, userId={}", request.sessionId(), userId);
-        return agentService
-                .chatStream(
-                        userId,
-                        request.sessionId(),
-                        request.message(),
-                        request.toolResults(),
-                        request.datasourceId())
-                .map(
-                        event ->
-                                ServerSentEvent.<ChatStreamEvent>builder()
-                                        .event(event.type().getCode())
-                                        .data(event)
-                                        .build());
+
+        return agentService.chatStream(
+                userId,
+                request.sessionId(),
+                request.message(),
+                request.toolResults(),
+                request.datasourceId()
+        ).map(event -> ServerSentEvent.<ChatStreamEvent>builder()
+                .event(event.type().getCode())
+                .data(event)
+                .build()
+        );
     }
 
     @PostMapping("/session/{sessionId}/stop")

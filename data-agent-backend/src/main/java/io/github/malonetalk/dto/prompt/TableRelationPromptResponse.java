@@ -18,9 +18,12 @@
 package io.github.malonetalk.dto.prompt;
 
 import io.github.malonetalk.enums.LogicalTableRelationType;
+
 import java.util.List;
 
-/** Agent-facing DTO for LLM prompt formatting. */
+/**
+ * Agent-facing DTO for LLM prompt formatting.
+ */
 public record TableRelationPromptResponse(
         LogicalTableRelationType relationType,
         String source,
@@ -28,4 +31,6 @@ public record TableRelationPromptResponse(
         List<String> sourceColumnNames,
         String targetTableName,
         List<String> targetColumnNames,
-        String description) {}
+        String description
+) {
+}

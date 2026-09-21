@@ -18,16 +18,16 @@
 package io.github.malonetalk.enums;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
+@Getter
 @AllArgsConstructor
 public enum TransportType {
+
     STDIO("stdio"),
     SSE("sse"),
     HTTP("http");
 
     private final String code;
 
-    public String getCode() {
-        return code;
-    }
 }

@@ -20,7 +20,9 @@ package io.github.malonetalk.dto.datasource;
 import java.util.List;
 import java.util.Locale;
 
-/** 物理数据源列信息，由 SchemaReader 从 JDBC 元数据读取 */
+/**
+ * 物理数据源列信息，由 SchemaReader 从 JDBC 元数据读取
+ */
 public record PhysicalColumnInfo(
         String columnName,
         String typeName,
@@ -30,7 +32,8 @@ public record PhysicalColumnInfo(
         String defaultValue,
         boolean primaryKey,
         String remarks,
-        List<String> indexes) {
+        List<String> indexes
+) {
 
     public String formattedTypeName() {
         if (typeName == null || typeName.isBlank()) {
@@ -42,12 +45,11 @@ public record PhysicalColumnInfo(
         }
         return switch (trimmedTypeName.toUpperCase(Locale.ROOT)) {
             case "CHAR", "VARCHAR" -> trimmedTypeName + "(" + columnSize + ")";
-            case "DECIMAL", "NUMERIC" ->
-                    trimmedTypeName
-                            + "("
-                            + columnSize
-                            + (decimalDigits > 0 ? "," + decimalDigits : "")
-                            + ")";
+            case "DECIMAL", "NUMERIC" -> trimmedTypeName
+                    + "("
+                    + columnSize
+                    + (decimalDigits > 0 ? "," + decimalDigits : "")
+                    + ")";
             default -> trimmedTypeName;
         };
     }

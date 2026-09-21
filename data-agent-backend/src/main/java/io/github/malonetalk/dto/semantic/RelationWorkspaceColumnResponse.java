@@ -26,4 +26,6 @@ public record RelationWorkspaceColumnResponse(
         String typeName,
         Boolean primaryKey,
         boolean operable,
-        String invalidReason) {}
+        String invalidReason
+) {
+}

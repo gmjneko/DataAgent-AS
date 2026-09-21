@@ -18,7 +18,9 @@
 package io.github.malonetalk.enums;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
+@Getter
 @AllArgsConstructor
 public enum ClientType {
     ASYNC("async"),
@@ -26,7 +28,4 @@ public enum ClientType {
 
     private final String code;
 
-    public String getCode() {
-        return code;
-    }
 }

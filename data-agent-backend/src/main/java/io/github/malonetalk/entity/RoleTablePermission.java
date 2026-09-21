@@ -22,9 +22,11 @@ import lombok.Data;
 
 @Data
 public class RoleTablePermission {
+
     private Integer id;
     private Integer roleId;
     private Integer datasourceId;
     private String tableName;
     private LocalDateTime createTime;
+
 }

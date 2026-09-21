@@ -22,11 +22,16 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record RelationSemanticPageQuery(
-        @NotNull @Min(1) Integer datasourceId,
+        @NotNull @Min(1)
+        Integer datasourceId,
         String tableName,
-        @Min(1) Integer page,
-        @Min(1) Integer pageSize,
+        @Min(1)
+        Integer page,
+        @Min(1)
+        Integer pageSize,
         String keyword,
         Boolean enabled,
         @Pattern(regexp = "^(?i)(asc|desc)$", message = "sortOrder must be asc or desc.")
-                String sortOrder) {}
+        String sortOrder
+) {
+}

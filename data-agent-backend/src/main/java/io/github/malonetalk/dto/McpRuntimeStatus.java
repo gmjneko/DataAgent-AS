@@ -19,6 +19,7 @@ package io.github.malonetalk.dto;
 
 import java.time.Instant;
 import java.util.List;
+
 import lombok.Builder;
 
 @Builder
@@ -28,11 +29,17 @@ public record McpRuntimeStatus(
         Instant lastConnectedAt,
         String error,
         List<ToolInfo> tools,
-        List<ToolInfo> discoveredTools) {
+        List<ToolInfo> discoveredTools
+) {
     public McpRuntimeStatus {
         tools = tools == null ? List.of() : List.copyOf(tools);
         discoveredTools = discoveredTools == null ? List.of() : List.copyOf(discoveredTools);
     }
 
-    public record ToolInfo(String name, String description, boolean readOnly) {}
+    public record ToolInfo(
+            String name,
+            String description,
+            boolean readOnly
+    ) {
+    }
 }

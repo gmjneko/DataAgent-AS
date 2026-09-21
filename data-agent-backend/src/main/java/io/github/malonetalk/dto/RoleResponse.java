@@ -19,4 +19,10 @@ package io.github.malonetalk.dto;
 
 import java.time.LocalDateTime;
 
-public record RoleResponse(Integer id, String name, String description, LocalDateTime createTime) {}
+public record RoleResponse(
+        Integer id,
+        String name,
+        String description,
+        LocalDateTime createTime
+) {
+}

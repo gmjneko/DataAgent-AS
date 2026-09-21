@@ -26,4 +26,5 @@ public class SessionDatasourceBinding {
     private String sessionId;
     private Integer datasourceId;
     private String datasourceName;
+
 }

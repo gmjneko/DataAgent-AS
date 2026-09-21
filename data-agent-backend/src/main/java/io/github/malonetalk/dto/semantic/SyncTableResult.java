@@ -32,4 +32,6 @@ public record SyncTableResult(
         int reactivatedColumns,
         int updatedColumns,
         int missingColumnsMarked,
-        String message) {}
+        String message
+) {
+}

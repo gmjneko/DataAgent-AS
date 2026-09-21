@@ -17,4 +17,8 @@
  */
 package io.github.malonetalk.dto;
 
-public record FieldValidationError(String field, String message) {}
+public record FieldValidationError(
+        String field,
+        String message
+) {
+}

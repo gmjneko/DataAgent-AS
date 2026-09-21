@@ -27,7 +27,9 @@ import io.github.malonetalk.dto.SaveTablePermissionRequest;
 import io.github.malonetalk.dto.TablePermissionResponse;
 import io.github.malonetalk.service.SysRoleService;
 import jakarta.validation.Valid;
+
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -61,7 +63,8 @@ public class SysRoleController {
 
     @PutMapping("/{id}")
     public Result<RoleResponse> update(
-            @PathVariable Integer id, @Valid @RequestBody RoleRequest request) {
+            @PathVariable Integer id, @Valid @RequestBody RoleRequest request
+    ) {
         return Result.success(sysRoleService.update(id, request));
     }
 
@@ -78,20 +81,23 @@ public class SysRoleController {
 
     @PutMapping("/{roleId}/permissions")
     public Result<Void> savePermissions(
-            @PathVariable Integer roleId, @Valid @RequestBody SaveTablePermissionRequest request) {
+            @PathVariable Integer roleId, @Valid @RequestBody SaveTablePermissionRequest request
+    ) {
         sysRoleService.savePermissions(roleId, request);
         return Result.success();
     }
 
     @GetMapping("/{roleId}/columns")
     public Result<List<ColumnPermissionResponse>> getColumnPermissions(
-            @PathVariable Integer roleId, @RequestParam Integer datasourceId) {
+            @PathVariable Integer roleId, @RequestParam Integer datasourceId
+    ) {
         return Result.success(sysRoleService.getColumnPermissions(roleId, datasourceId));
     }
 
     @PutMapping("/{roleId}/columns")
     public Result<Void> saveColumnPermissions(
-            @PathVariable Integer roleId, @Valid @RequestBody SaveColumnPermissionRequest request) {
+            @PathVariable Integer roleId, @Valid @RequestBody SaveColumnPermissionRequest request
+    ) {
         sysRoleService.saveColumnPermissions(roleId, request);
         return Result.success();
     }

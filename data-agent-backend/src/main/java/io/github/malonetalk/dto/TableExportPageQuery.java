@@ -20,4 +20,10 @@ package io.github.malonetalk.dto;
 import jakarta.validation.constraints.Min;
 
 public record TableExportPageQuery(
-        String sessionId, @Min(1) Integer page, @Min(1) Integer pageSize) {}
+        String sessionId,
+        @Min(1)
+        Integer page,
+        @Min(1)
+        Integer pageSize
+) {
+}

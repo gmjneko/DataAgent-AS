@@ -41,4 +41,5 @@ public class SysUser {
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
 }

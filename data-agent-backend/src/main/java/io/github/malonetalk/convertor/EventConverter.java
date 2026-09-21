@@ -36,10 +36,12 @@ import io.github.malonetalk.convertor.handler.ToolResultHandler;
 import io.github.malonetalk.dto.ChatStreamEvent;
 import io.github.malonetalk.dto.ChatStreamEvent.ToolCallInfo;
 import io.github.malonetalk.enums.ChatStreamEventType;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +50,9 @@ import org.springframework.stereotype.Component;
 public class EventConverter {
     private final List<ToolResultHandler> handlers;
 
-    /** Each subscription owns its buffers; no state leaks between simultaneous chats. */
+    /**
+     * Each subscription owns its buffers; no state leaks between simultaneous chats.
+     */
     public Function<AgentEvent, List<ChatStreamEvent>> newStreamMapper() {
         return new StreamMapper();
     }

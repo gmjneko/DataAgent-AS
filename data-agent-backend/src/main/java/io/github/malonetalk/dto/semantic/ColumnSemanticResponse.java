@@ -18,7 +18,9 @@
 package io.github.malonetalk.dto.semantic;
 
 import io.github.malonetalk.enums.ColumnSemanticType;
+
 import java.time.LocalDateTime;
+
 import lombok.Builder;
 
 @Builder
@@ -40,4 +42,6 @@ public record ColumnSemanticResponse(
         // 前端据此渲染“有效/无效”徽标。
         Boolean effective,
         String invalidReason,
-        LocalDateTime updateTime) {}
+        LocalDateTime updateTime
+) {
+}

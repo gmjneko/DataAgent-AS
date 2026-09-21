@@ -18,7 +18,9 @@
 package io.github.malonetalk.enums;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
+@Getter
 @AllArgsConstructor
 public enum HttpVersion {
     HTTP_1_1("http/1.1"),
@@ -26,7 +28,4 @@ public enum HttpVersion {
 
     private final String code;
 
-    public String getCode() {
-        return code;
-    }
 }

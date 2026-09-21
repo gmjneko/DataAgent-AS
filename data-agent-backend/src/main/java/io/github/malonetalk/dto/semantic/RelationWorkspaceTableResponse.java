@@ -18,6 +18,7 @@
 package io.github.malonetalk.dto.semantic;
 
 import java.util.List;
+
 import lombok.Builder;
 
 @Builder
@@ -27,4 +28,6 @@ public record RelationWorkspaceTableResponse(
         String description,
         boolean operable,
         String invalidReason,
-        List<RelationWorkspaceColumnResponse> columns) {}
+        List<RelationWorkspaceColumnResponse> columns
+) {
+}

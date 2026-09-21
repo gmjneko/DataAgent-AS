@@ -19,6 +19,7 @@ package io.github.malonetalk.dto.pagination;
 
 import io.github.malonetalk.common.ErrorCode;
 import io.github.malonetalk.exception.BusinessException;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -29,7 +30,8 @@ public record PageResponse<T>(
         int totalPages,
         boolean hasPrevious,
         boolean hasNext,
-        List<T> items) {
+        List<T> items
+) {
 
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PAGE_SIZE = 20;

@@ -33,4 +33,6 @@ public record DatasourceResponse(
         String description,
         Long creatorId,
         LocalDateTime createTime,
-        LocalDateTime updateTime) {}
+        LocalDateTime updateTime
+) {
+}

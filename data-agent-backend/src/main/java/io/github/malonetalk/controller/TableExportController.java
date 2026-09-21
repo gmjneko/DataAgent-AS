@@ -44,16 +44,15 @@ public class TableExportController {
     private final TableExportService tableExportService;
 
     @GetMapping
-    public Result<PageResponse<TableExportResponse>> findExports(
-            @Valid TableExportPageQuery query) {
+    public Result<PageResponse<TableExportResponse>> findExports(@Valid TableExportPageQuery query) {
         return Result.success(
-                tableExportService.getExportPage(query, UserContext.requireScopedUserId()));
+                tableExportService.getExportPage(query, UserContext.requireScopedUserId())
+        );
     }
 
     @GetMapping("/{id}/download")
     public ResponseEntity<byte[]> download(@PathVariable String id) {
-        TableExportResource file =
-                tableExportService.findDownload(id, UserContext.requireScopedUserId());
+        TableExportResource file = tableExportService.findDownload(id, UserContext.requireScopedUserId());
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(
@@ -61,7 +60,8 @@ public class TableExportController {
                         ContentDisposition.attachment()
                                 .filename(file.fileName())
                                 .build()
-                                .toString())
+                                .toString()
+                )
                 .body(file.content());
     }
 

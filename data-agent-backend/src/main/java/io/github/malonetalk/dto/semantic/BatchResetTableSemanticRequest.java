@@ -19,8 +19,13 @@ package io.github.malonetalk.dto.semantic;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 public record BatchResetTableSemanticRequest(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId,
-        @NotEmpty(message = "tableNames 不能为空") List<String> tableNames) {}
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId,
+        @NotEmpty(message = "tableNames 不能为空")
+        List<String> tableNames
+) {
+}

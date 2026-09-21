@@ -23,5 +23,7 @@ import jakarta.validation.constraints.Size;
 /** 管理员重置用户密码（不需旧密码）；区别于 {@link ChangePasswordRequest}（用户自己改，需验旧密码）。 */
 public record ResetPasswordRequest(
         @NotBlank(message = "newPassword 不能为空")
-                @Size(min = 6, max = 64, message = "newPassword 长度需在 6-64 之间")
-                String newPassword) {}
+        @Size(min = 6, max = 64, message = "newPassword 长度需在 6-64 之间")
+        String newPassword
+) {
+}

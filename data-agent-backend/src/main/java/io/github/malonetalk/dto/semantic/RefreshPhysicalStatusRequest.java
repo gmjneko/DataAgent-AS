@@ -20,4 +20,7 @@ package io.github.malonetalk.dto.semantic;
 import jakarta.validation.constraints.NotNull;
 
 public record RefreshPhysicalStatusRequest(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId) {}
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId
+) {
+}

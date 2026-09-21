@@ -64,29 +64,40 @@ public class TableRelationSemanticController {
                                 query.pageSize(),
                                 query.keyword(),
                                 query.enabled(),
-                                query.sortOrder())));
+                                query.sortOrder()
+                        )
+                )
+        );
     }
 
     @PostMapping
     public Result<LogicalTableRelationResponse> create(
             @PathVariable @NotBlank String tableName,
-            @Valid @RequestBody BindLogicalTableRelationRequest request) {
-        return Result.success(relationSemanticService.createRelationSemantic(tableName, request));
+            @Valid @RequestBody BindLogicalTableRelationRequest request
+    ) {
+        return Result.success(
+                relationSemanticService.createRelationSemantic(tableName, request)
+        );
     }
 
     @PutMapping
     public Result<LogicalTableRelationResponse> update(
             @PathVariable @NotBlank String tableName,
-            @Valid @RequestBody UpdateLogicalTableRelationRequest request) {
-        return Result.success(relationSemanticService.updateRelationSemantic(tableName, request));
+            @Valid @RequestBody UpdateLogicalTableRelationRequest request
+    ) {
+        return Result.success(
+                relationSemanticService.updateRelationSemantic(tableName, request)
+        );
     }
 
     @PutMapping("/enabled")
     public Result<Boolean> updateEnabled(
             @PathVariable @NotBlank String tableName,
-            @Valid @RequestBody UpdateLogicalTableRelationEnabledRequest request) {
+            @Valid @RequestBody UpdateLogicalTableRelationEnabledRequest request
+    ) {
         return Result.success(
-                relationSemanticService.updateRelationSemanticEnabled(tableName, request));
+                relationSemanticService.updateRelationSemanticEnabled(tableName, request)
+        );
     }
 
     @DeleteMapping("/{relationId}")
@@ -95,8 +106,8 @@ public class TableRelationSemanticController {
             @PathVariable @NotNull @Min(1) Integer relationId,
             @RequestParam @NotNull @Min(1) Integer datasourceId) {
         return Result.success(
-                relationSemanticService.deleteRelationSemantic(
-                        datasourceId, tableName, relationId));
+                relationSemanticService.deleteRelationSemantic(datasourceId, tableName, relationId)
+        );
     }
 
     @DeleteMapping("/batch")
@@ -104,7 +115,7 @@ public class TableRelationSemanticController {
             @PathVariable @NotBlank String tableName,
             @Valid @RequestBody BatchDeleteLogicalTableRelationRequest request) {
         return Result.success(
-                relationSemanticService.deleteRelationSemantics(
-                        request.datasourceId(), tableName, request.relationIds()));
+                relationSemanticService.deleteRelationSemantics(request.datasourceId(), tableName, request.relationIds())
+        );
     }
 }

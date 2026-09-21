@@ -18,8 +18,11 @@
 package io.github.malonetalk.dto.semantic;
 
 import io.github.malonetalk.dto.pagination.PageResponse;
+
 import java.util.List;
 
 public record RelationWorkspaceResponse(
         PageResponse<RelationWorkspaceTableResponse> nodes,
-        List<LogicalTableRelationResponse> relations) {}
+        List<LogicalTableRelationResponse> relations
+) {
+}

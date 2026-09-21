@@ -28,4 +28,5 @@ public class DomainInfo {
     private String description;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
 }

@@ -44,7 +44,8 @@ public class TableSemanticSyncController {
 
     @GetMapping("/candidates")
     public Result<PageResponse<PhysicalTableCandidateResponse>> getPhysicalTableCandidates(
-            @Valid PhysicalTableCandidatePageQuery query) {
+            @Valid PhysicalTableCandidatePageQuery query
+    ) {
         return Result.success(semanticSyncService.getPhysicalTableCandidates(query));
     }
 

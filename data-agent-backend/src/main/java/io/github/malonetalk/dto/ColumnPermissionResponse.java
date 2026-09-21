@@ -19,4 +19,8 @@ package io.github.malonetalk.dto;
 
 import java.util.List;
 
-public record ColumnPermissionResponse(String tableName, List<String> columnNames) {}
+public record ColumnPermissionResponse(
+        String tableName,
+        List<String> columnNames
+) {
+}

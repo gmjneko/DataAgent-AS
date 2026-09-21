@@ -25,4 +25,6 @@ public record ReportResponse(
         String content,
         String sessionId,
         LocalDateTime createTime,
-        LocalDateTime updateTime) {}
+        LocalDateTime updateTime
+) {
+}

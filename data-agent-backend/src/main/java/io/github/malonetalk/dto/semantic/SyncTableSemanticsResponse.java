@@ -28,4 +28,6 @@ public record SyncTableSemanticsResponse(
         int reactivatedColumns,
         int updatedColumns,
         int missingColumnsMarked,
-        List<SyncTableResult> results) {}
+        List<SyncTableResult> results
+) {
+}

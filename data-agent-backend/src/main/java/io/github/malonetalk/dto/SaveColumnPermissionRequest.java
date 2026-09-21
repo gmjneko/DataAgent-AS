@@ -19,9 +19,14 @@ package io.github.malonetalk.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 public record SaveColumnPermissionRequest(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId,
-        @NotBlank(message = "tableName 不能为空") String tableName,
-        List<String> columnNames) {}
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId,
+        @NotBlank(message = "tableName 不能为空")
+        String tableName,
+        List<String> columnNames
+) {
+}

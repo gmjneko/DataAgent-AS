@@ -26,7 +26,9 @@ import io.github.malonetalk.entity.MetricInfo;
 import io.github.malonetalk.service.MetricService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
@@ -60,8 +62,10 @@ public class MetricController {
     @PutMapping("/{id}")
     public Result<MetricResponse> update(
             @PathVariable @Positive(message = "id 必须为正数") Integer id,
-            @Valid @RequestBody MetricRequest request) {
+            @Valid @RequestBody MetricRequest request
+    ) {
         MetricInfo entity = metricConverter.toEntity(request);
+
         return Result.success(metricConverter.toResponse(metricService.update(id, entity)));
     }
 
@@ -74,7 +78,8 @@ public class MetricController {
 
     @GetMapping("/{id}")
     public Result<MetricResponse> getById(
-            @PathVariable @Positive(message = "id 必须为正数") Integer id) {
+            @PathVariable @Positive(message = "id 必须为正数") Integer id
+    ) {
         return Result.success(metricConverter.toResponse(metricService.getById(id)));
     }
 
@@ -86,6 +91,9 @@ public class MetricController {
     @GetMapping
     public Result<List<MetricResponse>> listAll() {
         return Result.success(
-                metricService.listAll().stream().map(metricConverter::toResponse).toList());
+                metricService.listAll().stream()
+                        .map(metricConverter::toResponse)
+                        .toList()
+        );
     }
 }

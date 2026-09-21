@@ -18,4 +18,8 @@
 package io.github.malonetalk.dto;
 
 /** 登录成功响应：token + 用户信息（一次往返，前端无需再调 me）。 */
-public record LoginResponse(String token, UserInfoResponse user) {}
+public record LoginResponse(
+        String token,
+        UserInfoResponse user
+) {
+}

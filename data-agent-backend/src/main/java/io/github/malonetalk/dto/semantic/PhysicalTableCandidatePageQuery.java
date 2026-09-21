@@ -22,9 +22,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record PhysicalTableCandidatePageQuery(
-        @NotNull(message = "datasourceId 不能为空") Integer datasourceId,
-        @Min(value = 1, message = "page 不能小于 1") Integer page,
-        @Min(value = 1, message = "pageSize 不能小于 1") Integer pageSize,
+        @NotNull(message = "datasourceId 不能为空")
+        Integer datasourceId,
+        @Min(value = 1, message = "page 不能小于 1")
+        Integer page,
+        @Min(value = 1, message = "pageSize 不能小于 1")
+        Integer pageSize,
         String keyword,
         @Pattern(regexp = "^(?i)(asc|desc)$", message = "sortOrder must be asc or desc.")
-                String sortOrder) {}
+        String sortOrder
+) {
+}

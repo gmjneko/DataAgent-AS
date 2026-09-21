@@ -51,19 +51,23 @@ public class TableColumnSemanticController {
 
     @GetMapping
     public Result<PageResponse<ColumnSemanticResponse>> findAllColumns(
-            @PathVariable @NotBlank String tableName, @Valid ColumnSemanticPageQuery query) {
+            @PathVariable @NotBlank String tableName, @Valid ColumnSemanticPageQuery query
+    ) {
         return Result.success(
                 columnSemanticService.getColumnPage(
                         new ColumnSemanticPageQuery(
                                 query.datasourceId(), tableName,
                                 query.page(), query.pageSize(),
-                                query.keyword(), query.sortOrder())));
+                                query.keyword(), query.sortOrder())
+                )
+        );
     }
 
     @PutMapping
     public Result<Boolean> updateColumnSemantic(
             @PathVariable @NotBlank String tableName,
-            @Valid @RequestBody ColumnSemanticUpdateRequest request) {
+            @Valid @RequestBody ColumnSemanticUpdateRequest request
+    ) {
         columnSemanticService.updateColumnSemantic(tableName, request);
         return Result.success(true);
     }
@@ -72,7 +76,8 @@ public class TableColumnSemanticController {
     public Result<Boolean> resetColumnSemantic(
             @PathVariable @NotBlank String tableName,
             @RequestParam @NotNull @Min(1) Integer datasourceId,
-            @RequestParam @NotBlank String columnName) {
+            @RequestParam @NotBlank String columnName
+    ) {
         columnSemanticService.resetColumnSemantic(datasourceId, tableName, columnName);
         return Result.success(true);
     }
@@ -80,9 +85,12 @@ public class TableColumnSemanticController {
     @DeleteMapping("/batch")
     public Result<Integer> resetColumnSemantics(
             @PathVariable @NotBlank String tableName,
-            @Valid @RequestBody BatchResetColumnSemanticRequest request) {
+            @Valid @RequestBody BatchResetColumnSemanticRequest request
+    ) {
         return Result.success(
                 columnSemanticService.resetColumnSemantics(
-                        request.datasourceId(), tableName, request.columnNames()));
+                        request.datasourceId(), tableName, request.columnNames()
+                )
+        );
     }
 }

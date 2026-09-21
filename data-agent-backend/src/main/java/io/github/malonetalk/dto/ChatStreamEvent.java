@@ -19,7 +19,9 @@ package io.github.malonetalk.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.malonetalk.enums.ChatStreamEventType;
+
 import java.util.Map;
+
 import lombok.Builder;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -31,11 +33,22 @@ public record ChatStreamEvent(
         String content,
         ToolCallInfo toolCall,
         ToolResultInfo toolResult,
-        String errorCode) {
+        String errorCode
+) {
 
-    public record ToolCallInfo(String id, String name, Map<String, Object> input) {}
+    public record ToolCallInfo(
+            String id,
+            String name,
+            Map<String, Object> input
+    ) {
+    }
 
-    public record ToolResultInfo(String id, String name, String output, boolean suspended) {
+    public record ToolResultInfo(
+            String id,
+            String name,
+            String output,
+            boolean suspended
+    ) {
 
         public ToolResultInfo(String id, String name, String output) {
             this(id, name, output, false);

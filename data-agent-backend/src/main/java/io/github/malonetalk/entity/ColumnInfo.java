@@ -38,4 +38,5 @@ public class ColumnInfo {
     private Boolean physicalStatus;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
 }

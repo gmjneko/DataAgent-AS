@@ -19,4 +19,9 @@ package io.github.malonetalk.dto;
 
 /** 当前用户信息及管理界面权限投影。 */
 public record UserInfoResponse(
-        Integer userId, String username, String displayName, boolean superAdmin) {}
+        Integer userId,
+        String username,
+        String displayName,
+        boolean superAdmin
+) {
+}
