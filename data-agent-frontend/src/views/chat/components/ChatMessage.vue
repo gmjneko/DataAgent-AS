@@ -16,53 +16,35 @@
  -->
 
 <script setup lang="ts">
-  import { computed, ref, onUnmounted } from 'vue';
-  import { marked } from 'marked';
+  import { computed, ref, watch, onUnmounted } from 'vue';
   import type { ChatMessage as ChatMessageType } from '@/composables/useAgentChat';
-  import ChatFileDownload from './ChatFileDownload.vue';
-  import TracePanel from './TracePanel.vue';
+  import { splitTimeline } from '@/utils/chatTimeline';
+  import MessageContent from './MessageContent.vue';
+  import ChatTimeline from './ChatTimeline.vue';
 
-  marked.use({ gfm: true, breaks: true });
-
-  const props = defineProps<{
-    message: ChatMessageType;
-  }>();
-
-  const emit = defineEmits<{
-    (e: 'previewReport', content: string): void;
-  }>();
-
-  const SUMMARY_MARKER = '\n\nSummary：\n';
-
-  const contentParts = computed(() => {
-    const idx = props.message.content.indexOf(SUMMARY_MARKER);
-    if (idx === -1) {
-      return { text: props.message.content, summary: '' };
-    }
-    return {
-      text: props.message.content.slice(0, idx),
-      summary: props.message.content.slice(idx + SUMMARY_MARKER.length),
-    };
+  const props = defineProps<{ message: ChatMessageType }>();
+  const emit = defineEmits<{ previewReport: [content: string] }>();
+  const expanded = ref(false);
+  const parts = computed(() => splitTimeline(props.message.timeline));
+  const hasAnswer = computed(
+    () =>
+      !props.message.isStreaming &&
+      props.message.outcome !== 'stopped' &&
+      props.message.outcome !== 'error' &&
+      parts.value.answer.length > 0,
+  );
+  const workLabel = computed(() => {
+    if (props.message.isStreaming) return '正在处理';
+    if (props.message.outcome === 'stopped') return '已停止';
+    if (props.message.outcome === 'error' || props.message.timeline.some(e => e.type === 'error'))
+      return '执行中出现错误';
+    if (!hasAnswer.value) return '处理记录';
+    const calls = parts.value.process.filter(e => e.type === 'tool_call').length;
+    return calls ? `已完成 · ${calls} 次工具调用` : '已完成';
   });
-
-  const TABLE_EXPORT_RE = /\/api\/table-exports\/([0-9a-f-]{36})\/download/i;
-
-  function extractDownloads(text: string) {
-    const fileIds: string[] = [];
-    const lines = text.split('\n').filter(line => {
-      const match = line.match(TABLE_EXPORT_RE);
-      if (!match) {
-        return true;
-      }
-      fileIds.push(match[1]);
-      return false;
-    });
-    return { text: lines.join('\n').trim(), fileIds };
-  }
-
-  const textContent = computed(() => extractDownloads(contentParts.value.text));
-  const renderedText = computed(() => marked.parse(textContent.value.text) as string);
-  const renderedSummary = computed(() => marked.parse(contentParts.value.summary) as string);
+  watch(hasAnswer, done => {
+    if (done) expanded.value = false;
+  });
 
   const copied = ref(false);
   let resetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -75,10 +57,9 @@
         copied.value = false;
       }, 2000);
     } catch {
-      // Clipboard API may fail in insecure contexts; ignore.
+      /* Clipboard can be unavailable in insecure contexts. */
     }
   }
-
   onUnmounted(() => {
     if (resetTimer) clearTimeout(resetTimer);
   });
@@ -95,38 +76,41 @@
       </button>
     </div>
     <div class="chat-message__bubble">
-      <TracePanel
-        v-if="message.role === 'agent'"
-        :message="message"
-        @preview-report="c => emit('previewReport', c)"
-      />
-      <div v-if="textContent.text" class="chat-message__content" v-html="renderedText"></div>
-      <div v-if="textContent.fileIds.length > 0" class="chat-message__downloads">
-        <ChatFileDownload v-for="id in textContent.fileIds" :key="id" :id="id" />
-      </div>
-      <div v-if="contentParts.summary" class="chat-message__summary" v-html="renderedSummary"></div>
-      <div
-        v-if="
-          message.isStreaming &&
-          !textContent.text &&
-          textContent.fileIds.length === 0 &&
-          !contentParts.summary &&
-          message.traceSteps.length === 0
-        "
-        class="chat-message__thinking"
-      >
-        思考中
-        <span class="chat-message__cursor">...</span>
-      </div>
-      <span
-        v-if="
-          message.isStreaming &&
-          (textContent.text || textContent.fileIds.length > 0 || contentParts.summary)
-        "
-        class="chat-message__cursor"
-      >
-        |
-      </span>
+      <MessageContent v-if="message.role === 'user'" :content="message.content" />
+      <template v-else-if="hasAnswer">
+        <div v-if="parts.process.length" class="chat-message__work">
+          <button
+            class="chat-message__work-toggle"
+            :aria-expanded="expanded"
+            @click="expanded = !expanded"
+          >
+            <el-icon :class="{ 'is-expanded': expanded }"><ArrowRight /></el-icon>
+            {{ workLabel }}
+          </button>
+          <ChatTimeline
+            v-if="expanded"
+            :events="parts.process"
+            :streaming="false"
+            @preview-report="emit('previewReport', $event)"
+          />
+        </div>
+        <ChatTimeline
+          :events="parts.answer"
+          :streaming="false"
+          @preview-report="emit('previewReport', $event)"
+        />
+      </template>
+      <template v-else>
+        <div class="chat-message__status" role="status">
+          {{ workLabel }}
+          <span v-if="message.isStreaming" class="chat-message__cursor">…</span>
+        </div>
+        <ChatTimeline
+          :events="message.timeline"
+          :streaming="message.isStreaming"
+          @preview-report="emit('previewReport', $event)"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -134,7 +118,8 @@
 <style scoped>
   .chat-message {
     display: flex;
-    margin-bottom: 16px;
+    width: min(900px, 100%);
+    margin: 0 auto 28px;
   }
 
   .chat-message--user {
@@ -147,155 +132,26 @@
   }
 
   .chat-message__bubble {
-    max-width: 100%;
-    padding: 16px 20px;
-    border-radius: 12px;
+    max-width: min(78%, 650px);
+    padding: 12px 16px;
+    border-radius: 14px;
     font-size: 14px;
-    line-height: 1.6;
-    box-shadow: var(--app-shadow-sm);
+    line-height: 1.65;
   }
 
   .chat-message--user .chat-message__bubble {
     background: var(--app-accent);
     color: var(--app-accent-text);
-    border-bottom-right-radius: 2px;
+    border-bottom-right-radius: 5px;
+    box-shadow: 0 2px 8px rgba(24, 24, 27, 0.1);
   }
 
   .chat-message--agent .chat-message__bubble {
-    background: var(--app-bg-card);
+    background: transparent;
     color: var(--app-text-primary);
-    border-bottom-left-radius: 2px;
-    border: 1px solid var(--app-border);
     width: 100%;
-  }
-
-  .chat-message__content {
-    word-break: break-word;
-
-    :deep(p) {
-      margin: 0 0 8px;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    :deep(strong) {
-      font-weight: 700;
-    }
-
-    :deep(em) {
-      font-style: italic;
-    }
-
-    :deep(ul),
-    :deep(ol) {
-      padding-left: 20px;
-      margin: 4px 0 8px;
-    }
-
-    :deep(li) {
-      margin-bottom: 2px;
-    }
-
-    :deep(code) {
-      background: var(--app-bg-hover);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    }
-
-    :deep(pre) {
-      background: var(--app-bg-page);
-      border: 1px solid var(--app-border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      overflow-x: auto;
-      margin: 8px 0;
-
-      code {
-        background: none;
-        padding: 0;
-        font-size: 13px;
-      }
-    }
-
-    :deep(blockquote) {
-      border-left: 3px solid var(--app-accent);
-      padding-left: 12px;
-      margin: 8px 0;
-      color: var(--app-text-secondary);
-    }
-
-    :deep(h1),
-    :deep(h2),
-    :deep(h3),
-    :deep(h4),
-    :deep(h5),
-    :deep(h6) {
-      margin: 12px 0 6px;
-      font-weight: 600;
-      line-height: 1.4;
-    }
-
-    :deep(table) {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 8px 0;
-
-      th,
-      td {
-        border: 1px solid var(--app-border);
-        padding: 6px 12px;
-        text-align: left;
-      }
-
-      th {
-        background: var(--app-bg-page);
-        font-weight: 600;
-      }
-    }
-
-    :deep(hr) {
-      border: none;
-      border-top: 1px solid var(--app-border);
-      margin: 12px 0;
-    }
-  }
-
-  .chat-message__summary {
-    word-break: break-word;
-    color: #16a34a;
-    margin-top: 8px;
-
-    :deep(p) {
-      margin: 0 0 8px;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    :deep(strong) {
-      font-weight: 700;
-    }
-
-    :deep(ul),
-    :deep(ol) {
-      padding-left: 20px;
-      margin: 4px 0 8px;
-    }
-  }
-
-  .chat-message__downloads {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  [data-theme='dark'] .chat-message__summary {
-    color: #22c55e;
+    max-width: 100%;
+    padding: 0;
   }
 
   .chat-message__thinking {
@@ -359,5 +215,34 @@
     50% {
       opacity: 0;
     }
+  }
+  .chat-message__work {
+    margin-bottom: 22px;
+  }
+  .chat-message__work-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0 0 12px;
+    margin-bottom: 16px;
+    color: var(--app-text-secondary);
+    border: none;
+    border-bottom: 1px solid var(--app-border);
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    font-size: 13px;
+  }
+  .chat-message__work-toggle .el-icon {
+    transition: transform 0.15s;
+  }
+  .chat-message__work-toggle .is-expanded {
+    transform: rotate(90deg);
+  }
+  .chat-message__status {
+    color: var(--app-text-muted);
+    font-size: 13px;
+    margin-bottom: 20px;
   }
 </style>

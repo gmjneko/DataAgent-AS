@@ -16,318 +16,111 @@
  -->
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
-  import type { ChatStreamEventType } from '@/api/agent';
-  import type { ChatMessage, TraceStep } from '@/composables/useAgentChat';
+  import { computed } from 'vue';
+  import type { TimelineEvent } from '@/utils/chatTimeline';
   import { INTERACTIVE_TOOLS, isInteractiveTool } from '@/utils/interactiveTools';
 
-  const props = defineProps<{
-    message: ChatMessage;
-  }>();
-
-  const emit = defineEmits<{
-    (e: 'previewReport', content: string): void;
-  }>();
-
-  const isExpanded = ref(false);
-
-  function toggleExpand() {
-    isExpanded.value = !isExpanded.value;
-  }
-
-  const stepCounts = computed(() => {
-    const counts: Record<string, number> = {};
-    for (const step of props.message.traceSteps) {
-      counts[step.type] = (counts[step.type] || 0) + 1;
+  const props = defineProps<{ step: TimelineEvent; running: boolean }>();
+  const emit = defineEmits<{ previewReport: [content: string] }>();
+  const title = computed(() => {
+    const { step, running } = props;
+    if (step.type === 'error') return `执行出错${step.errorCode ? ` · ${step.errorCode}` : ''}`;
+    if (step.type === 'question') return '等待你的回答';
+    if (step.type === 'report') return '分析报告已生成';
+    if (step.toolCall) {
+      if (isInteractiveTool(step.toolCall.name)) return INTERACTIVE_TOOLS[step.toolCall.name].label;
+      return `${running ? '正在运行' : '已调用'} ${step.toolCall.name}`;
     }
-    return counts;
+    return step.toolResult ? `已返回 ${step.toolResult.name}` : step.type;
   });
-
-  const toolCallCount = computed(() => stepCounts.value.tool_call || 0);
-  const toolResultCount = computed(() => stepCounts.value.tool_result || 0);
-
-  const summaryLabel = computed(() => {
-    const parts: string[] = [];
-    const total = toolCallCount.value + toolResultCount.value;
-    if (total > 0) {
-      parts.push(`${total} 次工具调用`);
-    }
-    const thinkCount = stepCounts.value.thinking || 0;
-    if (thinkCount > 0) {
-      parts.push(`${thinkCount} 条思考`);
-    }
-    return parts.join(' | ') || `${props.message.traceSteps.length} 个步骤`;
+  const detail = computed(() => {
+    const { step } = props;
+    if (step.toolCall) return JSON.stringify(step.toolCall.input, null, 2);
+    return step.toolResult?.output ?? step.content ?? '';
   });
-
-  interface StepRenderer {
-    label: string;
-  }
-
-  const stepRenderers: Record<string, StepRenderer> = {
-    thinking: { label: '思考' },
-    tool_call: { label: '动作' },
-    tool_result: { label: '观察' },
-    question: { label: '问题' },
-    report: { label: '报告' },
-    error: { label: '错误' },
-  };
-
-  function getStepRenderer(type: ChatStreamEventType): StepRenderer {
-    return stepRenderers[type] ?? { label: type };
-  }
-
-  function stepLabel(step: TraceStep): string {
-    if (step.type === 'tool_call' && isInteractiveTool(step.toolCall?.name)) {
-      return `[${INTERACTIVE_TOOLS[step.toolCall!.name].label}]`;
-    }
-    if (step.type === 'tool_result' && isInteractiveTool(step.toolResult?.name)) {
-      return `[${INTERACTIVE_TOOLS[step.toolResult!.name].resultLabel}]`;
-    }
-    return `[${getStepRenderer(step.type).label}]`;
-  }
-
-  function stepContent(step: TraceStep): string {
-    if (step.type === 'tool_call' && step.toolCall) {
-      if (isInteractiveTool(step.toolCall.name)) {
-        const def = INTERACTIVE_TOOLS[step.toolCall.name];
-        return (step.toolCall.input[def.questionField] as string) ?? '等待用户输入...';
-      }
-      return `调用工具: ${step.toolCall.name}`;
-    }
-    if (step.type === 'tool_result' && step.toolResult) {
-      if (isInteractiveTool(step.toolResult.name)) {
-        return step.toolResult.output || '(无内容)';
-      }
-      return `工具 ${step.toolResult.name} 返回结果`;
-    }
-    if (step.type === 'question') {
-      return `等待用户回答: ${step.content ?? ''}`;
-    }
-    if (step.type === 'report') {
-      return '报告已生成';
-    }
-    if (step.type === 'error') {
-      const message = step.content ?? '请求失败';
-      return step.errorCode ? `[${step.errorCode}] ${message}` : message;
-    }
-    return step.content ?? '';
-  }
-
-  function formatJson(obj: unknown): string {
-    try {
-      return JSON.stringify(obj, null, 2);
-    } catch {
-      return String(obj);
-    }
-  }
-
-  function displayMultiline(text: string | null): string {
-    if (!text) return '';
-    return text.replace(/\\n/g, '\n');
-  }
 </script>
 
 <template>
-  <div v-if="message.traceSteps.length > 0" class="trace-panel" :class="{ expanded: isExpanded }">
-    <div class="trace-panel__header" @click="toggleExpand">
-      <span class="trace-panel__arrow">></span>
-      <span class="trace-panel__dot"></span>
-      <span v-if="message.isStreaming" class="trace-panel__spinner"></span>
-      <span class="trace-panel__title">{{ message.isStreaming ? '思考中' : '思考完成' }}</span>
-      <span class="trace-panel__summary">{{ summaryLabel }}</span>
-    </div>
-    <div v-show="isExpanded" class="trace-panel__body">
-      <div
-        v-for="(step, idx) in message.traceSteps"
-        :key="idx"
-        class="trace-step"
-        :class="`trace-step--${step.type}`"
+  <details
+    class="trace-step"
+    :class="{ 'trace-step--error': step.type === 'error' }"
+    :open="step.type === 'error' || step.type === 'question'"
+  >
+    <summary>
+      <el-icon v-if="running" class="trace-step__spinner"><Loading /></el-icon>
+      <el-icon v-else-if="step.type === 'error'"><Warning /></el-icon>
+      <el-icon v-else-if="step.type === 'tool_result'"><CircleCheck /></el-icon>
+      <el-icon v-else><Operation /></el-icon>
+      <span>{{ title }}</span>
+      <el-icon class="trace-step__chevron"><ArrowRight /></el-icon>
+    </summary>
+    <div class="trace-step__detail">
+      <button
+        v-if="step.type === 'report' && step.toolResult"
+        class="trace-step__report"
+        @click="emit('previewReport', step.toolResult.output)"
       >
-        <span class="trace-step__label">{{ stepLabel(step) }}</span>
-        <span class="trace-step__content">{{ displayMultiline(stepContent(step)) }}</span>
-        <div v-if="step.type === 'tool_call' && step.toolCall" class="trace-step__code">
-          <div class="code-label">Input:</div>
-          <pre class="code-block">{{ displayMultiline(formatJson(step.toolCall.input)) }}</pre>
-        </div>
-        <div
-          v-if="
-            step.type === 'tool_result' &&
-            step.toolResult &&
-            !isInteractiveTool(step.toolResult.name)
-          "
-          class="trace-step__code"
-        >
-          <div class="code-label">Output:</div>
-          <pre class="code-block">{{ displayMultiline(step.toolResult.output) }}</pre>
-        </div>
-        <div v-if="step.type === 'report' && step.toolResult" class="trace-step__code">
-          <el-button link type="primary" @click="emit('previewReport', step.toolResult!.output)">
-            预览报告
-          </el-button>
-        </div>
-      </div>
+        预览报告
+      </button>
+      <pre v-else>{{ detail }}</pre>
     </div>
-  </div>
+  </details>
 </template>
 
 <style scoped>
-  .trace-panel {
-    background: var(--app-bg-page);
-    border: 1px solid var(--app-border);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    overflow: hidden;
-    transition:
-      background-color 0.2s,
-      border-color 0.2s;
-  }
-
-  .trace-panel__header {
-    padding: 10px 16px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
+  .trace-step {
+    min-width: 0;
     color: var(--app-text-secondary);
+    font-size: 13px;
+  }
+  .trace-step summary {
     display: flex;
     align-items: center;
-    gap: 8px;
-    user-select: none;
+    gap: 9px;
+    cursor: pointer;
+    list-style: none;
   }
-
-  .trace-panel__header:hover {
-    background: var(--app-bg-hover);
+  .trace-step summary::-webkit-details-marker {
+    display: none;
   }
-
-  .trace-panel__arrow {
-    font-size: 10px;
-    color: var(--app-text-muted);
-    transition: transform 0.2s;
+  .trace-step summary span {
+    overflow-wrap: anywhere;
   }
-
-  .trace-panel.expanded .trace-panel__arrow {
-    transform: rotate(90deg);
-  }
-
-  .trace-panel__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #16a34a;
-  }
-
-  .trace-panel__title {
-    white-space: nowrap;
-  }
-
-  .trace-panel__spinner {
-    width: 10px;
-    height: 10px;
-    border: 2px solid var(--app-border);
-    border-top-color: var(--app-accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  .trace-panel__summary {
-    color: var(--app-text-muted);
-    font-weight: normal;
-    margin-left: auto;
-  }
-
-  .trace-panel__body {
-    padding: 0 16px 16px 16px;
-    border-top: 1px solid var(--app-border);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 12px;
-  }
-
-  .trace-step {
-    margin-top: 12px;
-    padding-left: 12px;
-    border-left: 2px solid var(--app-border);
-    position: relative;
-    line-height: 1.6;
-  }
-
-  .trace-step::before {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: 6px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--app-text-muted);
-  }
-
-  .trace-step__label {
-    font-weight: 600;
-    margin-right: 6px;
-  }
-
-  .trace-step__content {
-    color: var(--app-text-secondary);
-    white-space: pre-wrap;
-  }
-
-  .trace-step--thinking,
-  .trace-step--thinking .trace-step__label {
-    color: var(--app-text-muted);
-  }
-
-  .trace-step--tool_call,
-  .trace-step--tool_call .trace-step__label {
-    color: var(--app-link);
-  }
-
-  .trace-step--tool_result,
-  .trace-step--tool_result .trace-step__label {
-    color: #16a34a;
-  }
-
-  .trace-step--question,
-  .trace-step--question .trace-step__label {
-    color: #d97706;
-  }
-
-  .trace-step--summary,
-  .trace-step--summary .trace-step__label {
-    color: #7c3aed;
-  }
-
-  .trace-step--report,
-  .trace-step--report .trace-step__label {
-    color: #2563eb;
-  }
-
-  .trace-step--error,
-  .trace-step--error .trace-step__label {
-    color: #dc2626;
-  }
-
-  .trace-step__code {
-    margin-top: 8px;
-  }
-
-  .code-label {
+  .trace-step__chevron {
     color: var(--app-text-muted);
     font-size: 11px;
-    margin-bottom: 4px;
+    transition: transform 0.15s;
   }
-
-  .code-block {
-    background: #1e293b;
-    color: #e2e8f0;
-    padding: 10px;
-    border-radius: 6px;
-    overflow-x: auto;
+  .trace-step[open] .trace-step__chevron {
+    transform: rotate(90deg);
+  }
+  .trace-step__detail {
+    margin: 10px 0 0 23px;
+  }
+  .trace-step pre {
+    padding: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--app-bg-page);
     white-space: pre-wrap;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.5;
-    margin: 0;
+    overflow-wrap: anywhere;
+    max-height: 320px;
+    overflow: auto;
+    font:
+      12px/1.6 ui-monospace,
+      monospace;
   }
-
+  .trace-step--error {
+    color: var(--el-color-danger);
+  }
+  .trace-step__report {
+    border: 0;
+    background: transparent;
+    color: var(--app-link);
+  }
+  .trace-step__spinner {
+    animation: spin 1s linear infinite;
+  }
   @keyframes spin {
     to {
       transform: rotate(360deg);

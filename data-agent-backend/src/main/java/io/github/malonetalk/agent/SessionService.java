@@ -127,7 +127,7 @@ public class SessionService {
                                 .map(block -> ((TextBlock) block).getText())
                                 .filter(t -> t != null && !t.isEmpty())
                                 .collect(Collectors.joining());
-                turns.add(new TurnItem(MsgRole.USER.name(), text, List.of()));
+                turns.add(new TurnItem(MsgRole.USER.name(), text, List.of(), List.of()));
             } else {
                 if (agentBlocks == null) {
                     agentBlocks = new ArrayList<>();
@@ -144,28 +144,32 @@ public class SessionService {
 
     private TurnItem buildAgentTurn(List<ContentBlock> blocks) {
         StringBuilder content = new StringBuilder();
-        List<ChatStreamEvent> traceSteps = new ArrayList<>();
+        List<ChatStreamEvent> timeline = new ArrayList<>();
 
         for (ContentBlock block : blocks) {
             if (block instanceof TextBlock tb) {
-                appendText(content, tb);
+                if (tb.getText() != null && !tb.getText().isEmpty()) {
+                    content.append(tb.getText());
+                    timeline.add(
+                            ChatStreamEvent.builder()
+                                    .type(ChatStreamEventType.TEXT)
+                                    .content(tb.getText())
+                                    .build());
+                }
             } else if (block instanceof ThinkingBlock tb) {
-                appendThinking(traceSteps, tb);
+                appendThinking(timeline, tb);
             } else if (block instanceof ToolUseBlock tub) {
-                appendToolCall(traceSteps, tub);
+                appendToolCall(timeline, tub);
             } else if (block instanceof ToolResultBlock trb) {
-                appendToolResult(traceSteps, trb);
+                appendToolResult(timeline, trb);
             }
         }
 
-        return new TurnItem(MsgRole.ASSISTANT.name(), content.toString(), traceSteps);
-    }
-
-    private void appendText(StringBuilder content, TextBlock tb) {
-        String text = tb.getText();
-        if (text != null && !text.isEmpty()) {
-            content.append(text);
-        }
+        List<ChatStreamEvent> traceSteps =
+                timeline.stream()
+                        .filter(event -> event.type() != ChatStreamEventType.TEXT)
+                        .toList();
+        return new TurnItem(MsgRole.ASSISTANT.name(), content.toString(), traceSteps, timeline);
     }
 
     private void appendThinking(List<ChatStreamEvent> traceSteps, ThinkingBlock tb) {

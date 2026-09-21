@@ -75,6 +75,7 @@ export interface TurnItem {
   role: string;
   content: string;
   traceSteps: ChatStreamEvent[];
+  timeline?: ChatStreamEvent[];
 }
 
 interface ApiErrorBody {

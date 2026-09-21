@@ -91,13 +91,22 @@
 <template>
   <div class="session-list">
     <div class="session-list__header">
-      <span class="session-list__title">会话记录</span>
-      <el-button size="small" text @click="loadList" :loading="loading">
-        <span v-if="!loading">刷新</span>
-      </el-button>
+      <div>
+        <div class="session-list__eyebrow">WORKSPACE</div>
+        <span class="session-list__title">会话</span>
+      </div>
+      <button class="session-list__refresh" title="刷新会话" @click="loadList">
+        <el-icon :class="{ spinning: loading }"><Refresh /></el-icon>
+      </button>
     </div>
 
+    <button class="session-list__new" @click="handleNewSession">
+      <el-icon><Plus /></el-icon>
+      <span>新建会话</span>
+    </button>
+
     <div class="session-list__body">
+      <div class="session-list__section-label">最近会话</div>
       <div v-if="sessions.length === 0 && !loading" class="session-list__empty">暂无会话</div>
       <div
         v-for="s in sessions"
@@ -120,7 +129,7 @@
     </div>
 
     <div class="session-list__footer">
-      <el-button class="new-session-btn" @click="handleNewSession">新建会话</el-button>
+      <span class="session-list__footer-tip">对话会自动保存</span>
     </div>
   </div>
 </template>
@@ -132,7 +141,7 @@
     height: 100%;
     background: var(--app-bg-sidebar);
     border-right: 1px solid var(--app-border);
-    border-radius: 8px 0 0 8px;
+    border-radius: 0;
     transition:
       background-color 0.2s,
       border-color 0.2s;
@@ -142,21 +151,86 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--app-border);
+    padding: 20px 17px 14px;
     flex-shrink: 0;
   }
 
   .session-list__title {
-    font-size: 14px;
-    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+    font-size: 16px;
+    font-weight: 650;
     color: var(--app-text-primary);
+  }
+
+  .session-list__eyebrow {
+    color: var(--app-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+  }
+
+  .session-list__refresh {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: none;
+    border-radius: 7px;
+    color: var(--app-text-muted);
+    background: transparent;
+  }
+
+  .session-list__refresh:hover {
+    color: var(--app-text-primary);
+    background: var(--app-bg-hover);
+  }
+
+  .session-list__refresh .spinning {
+    animation: spin 0.8s linear infinite;
+  }
+
+  .session-list__new {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: calc(100% - 24px);
+    margin: 6px 12px 13px;
+    padding: 10px 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    color: var(--app-text-primary);
+    background: var(--app-bg-card);
+    font-size: 13px;
+    font-weight: 550;
+    box-shadow: var(--app-shadow-sm);
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
+  }
+
+  .session-list__new:hover {
+    border-color: var(--app-text-muted);
+    background: var(--app-bg-hover);
+  }
+
+  .session-list__new-shortcut {
+    margin-left: auto;
+    color: var(--app-text-muted);
+    font-size: 11px;
   }
 
   .session-list__body {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: 0 10px 10px;
+  }
+
+  .session-list__section-label {
+    padding: 7px 7px 8px;
+    color: var(--app-text-muted);
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .session-list__empty {
@@ -167,11 +241,11 @@
   }
 
   .session-item {
-    padding: 10px 12px;
-    border-radius: 6px;
+    padding: 10px 11px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.1s;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
 
   .session-item__row {
@@ -217,7 +291,7 @@
 
   .session-item.active {
     background: var(--app-bg-hover);
-    border-left: 3px solid var(--app-accent);
+    box-shadow: inset 2px 0 0 var(--app-accent);
   }
 
   .session-item__title {
@@ -250,12 +324,19 @@
   }
 
   .session-list__footer {
-    padding: 12px 16px;
+    padding: 12px 17px 17px;
     border-top: 1px solid var(--app-border);
     flex-shrink: 0;
   }
 
-  .new-session-btn {
-    width: 100%;
+  .session-list__footer-tip {
+    color: var(--app-text-muted);
+    font-size: 11px;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

@@ -80,17 +80,12 @@ public class EventConverter {
     }
 
     private List<ChatStreamEvent> handleSummary(Msg msg, String messageId, boolean isLast) {
-        String text = extractAllText(msg);
-        if (!StringUtils.hasText(text)) {
+        // With incremental streaming, the final event repeats the complete message.
+        // Keep reasoning and answer blocks separate, and emit each delta only once.
+        if (isLast) {
             return List.of();
         }
-        return List.of(
-                ChatStreamEvent.builder()
-                        .type(ChatStreamEventType.SUMMARY)
-                        .messageId(messageId)
-                        .isLast(isLast)
-                        .content(text)
-                        .build());
+        return handleContentBlocks(EventType.SUMMARY, msg, messageId, false);
     }
 
     private List<ChatStreamEvent> handleReasoningLast(Msg msg, String messageId, boolean isLast) {
@@ -134,7 +129,7 @@ public class EventConverter {
         } else if (block instanceof ToolResultBlock trb) {
             return convertToolResult(trb, messageId, isLast);
         } else if (block instanceof TextBlock tb) {
-            return convertText(tb, messageId, isLast);
+            return convertText(tb, eventType, messageId, isLast);
         } else {
             log.warn("Unknown ContentBlock type: {}", block.getClass().getName());
             return null;
@@ -143,7 +138,7 @@ public class EventConverter {
 
     private ChatStreamEvent convertThinking(ThinkingBlock tb, String messageId, boolean isLast) {
         String thinking = tb.getThinking();
-        if (!StringUtils.hasText(thinking)) {
+        if (thinking == null || thinking.isEmpty()) {
             return null;
         }
         return ChatStreamEvent.builder()
@@ -176,33 +171,21 @@ public class EventConverter {
                 .orElseGet(() -> ToolResultHandler.defaultHandle(trb, text, messageId, isLast));
     }
 
-    private ChatStreamEvent convertText(TextBlock tb, String messageId, boolean isLast) {
+    private ChatStreamEvent convertText(
+            TextBlock tb, EventType eventType, String messageId, boolean isLast) {
         String text = tb.getText();
-        if (!StringUtils.hasText(text)) {
+        if (text == null || text.isEmpty()) {
             return null;
         }
         return ChatStreamEvent.builder()
-                .type(ChatStreamEventType.TEXT)
+                .type(
+                        eventType == EventType.SUMMARY
+                                ? ChatStreamEventType.SUMMARY
+                                : ChatStreamEventType.TEXT)
                 .messageId(messageId)
                 .isLast(isLast)
                 .content(text)
                 .build();
-    }
-
-    private String extractAllText(Msg msg) {
-        return msg.getContent().stream()
-                .map(
-                        block -> {
-                            if (block instanceof TextBlock tb) {
-                                return tb.getText();
-                            } else if (block instanceof ThinkingBlock tb) {
-                                return tb.getThinking();
-                            } else {
-                                return null;
-                            }
-                        })
-                .filter(StringUtils::hasText)
-                .collect(Collectors.joining("\n"));
     }
 
     private String extractOutputText(ToolResultBlock trb) {

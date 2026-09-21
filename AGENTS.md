@@ -1,5 +1,13 @@
 # Engineering Principles
 
+## Collaboration Preferences
+
+- 禁止解压依赖包、归档文件来查看源码，也不要通过反编译等方式绕过这一约定。
+- 需要额外文档或当前项目之外的源码时，先询问用户是否有材料可以提供，不要自行查找或下载依赖源码。
+- 遇到缺失材料或不明确的行为，先与用户沟通；不要闷头扩大排查范围，试图一次性自行处理所有问题。
+
+## Code Guidelines
+
 **Keep code simple: avoid overly long files and functions to manage complexity.** When a file exceeds ~400 lines or a function exceeds ~80 lines, consider splitting it. Break complex logic into small, focused units to reduce cognitive load.
 
 **YAGNI — don't add code or abstractions until it's actually needed.** If a feature, interface, or parameter isn't required by the current requirement, omit it. You Aren't Gonna Need It.

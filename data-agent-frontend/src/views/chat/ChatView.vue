@@ -45,7 +45,7 @@
 
   const messagesContainer = ref<{ scrollTop: number; scrollHeight: number }>();
   const sessionListRef = ref<InstanceType<typeof SessionList>>();
-  const showSessionList = ref(false);
+  const showSessionList = ref(window.innerWidth > 1100);
   const reportDialogVisible = ref(false);
   const reportListKey = ref(0);
   const previewVisible = ref(false);
@@ -187,9 +187,16 @@
     <div class="chat-view__main">
       <div class="chat-view__header">
         <div class="chat-view__header-left">
-          <button class="chat-view__toggle-btn" @click="toggleSessionList">
-            {{ showSessionList ? '◁' : '▷' }}
+          <button class="chat-view__toggle-btn" title="显示或隐藏会话" @click="toggleSessionList">
+            <el-icon :size="17">
+              <Fold v-if="showSessionList" />
+              <Expand v-else />
+            </el-icon>
           </button>
+          <div class="chat-view__heading">
+            <span class="chat-view__title">AI 智能分析</span>
+            <span class="chat-view__subtitle">Data Agent 工作区</span>
+          </div>
         </div>
         <div class="chat-view__header-right">
           <el-select
@@ -197,7 +204,7 @@
             :disabled="isBound"
             :placeholder="dsPlaceholder"
             size="small"
-            style="width: 180px"
+            class="chat-view__datasource"
             :title="isBound ? '会话已绑定数据源，不可切换' : undefined"
           >
             <el-option v-for="ds in datasources" :key="ds.id" :label="ds.name" :value="ds.id" />
@@ -210,6 +217,7 @@
           </el-select>
           <el-button
             text
+            class="chat-view__header-action"
             @click="
               reportDialogVisible = true;
               reportListKey++;
@@ -217,25 +225,35 @@
           >
             会话报告
           </el-button>
-          <el-button text @click="handleNewSession">新建会话</el-button>
+          <el-button text class="chat-view__header-action" @click="handleNewSession">
+            <el-icon><Plus /></el-icon>
+            新建会话
+          </el-button>
         </div>
       </div>
 
       <div ref="messagesContainer" class="chat-view__messages">
         <div v-if="messages.length === 0" class="chat-view__empty">
-          <div class="chat-view__empty-text">开始对话，让 AI 帮你分析数据</div>
+          <div class="chat-view__empty-mark">
+            <el-icon :size="27"><DataAnalysis /></el-icon>
+          </div>
+          <div class="chat-view__empty-eyebrow">DATA AGENT</div>
+          <div class="chat-view__empty-text">今天想探索什么数据？</div>
           <div class="chat-view__empty-hints">
             <div
               class="hint-item"
               @click="handleSend('帮我查一下上个月高价值用户都买了哪些品类的商品？')"
             >
-              "帮我查一下上个月高价值用户都买了哪些品类的商品？"
+              <span class="hint-item__icon">⌁</span>
+              <span>帮我查一下上个月高价值用户都买了哪些品类的商品？</span>
             </div>
             <div class="hint-item" @click="handleSend('分析今年第一季度的销售趋势')">
-              "分析今年第一季度的销售趋势"
+              <span class="hint-item__icon">↗</span>
+              <span>分析今年第一季度的销售趋势</span>
             </div>
             <div class="hint-item" @click="handleSend('统计各地区的用户活跃情况')">
-              "统计各地区的用户活跃情况"
+              <span class="hint-item__icon">◌</span>
+              <span>统计各地区的用户活跃情况</span>
             </div>
           </div>
         </div>
@@ -280,129 +298,4 @@
   </div>
 </template>
 
-<style scoped>
-  .chat-view {
-    display: flex;
-    height: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-
-  .chat-view__session-panel {
-    width: 260px;
-    flex-shrink: 0;
-    overflow: hidden;
-    transition:
-      width 0.2s,
-      opacity 0.2s;
-    opacity: 1;
-  }
-
-  .chat-view__session-panel--hidden {
-    width: 0;
-    opacity: 0;
-  }
-
-  .chat-view__main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    background: var(--app-bg-card);
-    border-radius: 8px;
-    border: 1px solid var(--app-border);
-    overflow: hidden;
-    transition:
-      background-color 0.2s,
-      border-color 0.2s;
-  }
-
-  .chat-view__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--app-border);
-    flex-shrink: 0;
-  }
-
-  .chat-view__header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .chat-view__header-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .chat-view__toggle-btn {
-    background: none;
-    border: none;
-    font-size: 14px;
-    color: var(--app-text-muted);
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition:
-      color 0.15s,
-      background-color 0.15s;
-  }
-
-  .chat-view__toggle-btn:hover {
-    color: var(--app-text-primary);
-    background: var(--app-bg-hover);
-  }
-
-  .chat-view__messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-  }
-
-  .chat-view__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    color: var(--app-text-muted);
-  }
-
-  .chat-view__empty-text {
-    font-size: 16px;
-    margin-bottom: 24px;
-    color: var(--app-text-secondary);
-  }
-
-  .chat-view__empty-hints {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    max-width: 480px;
-  }
-
-  .hint-item {
-    padding: 10px 16px;
-    background: var(--app-bg-page);
-    border: 1px solid var(--app-border);
-    border-radius: 8px;
-    font-size: 13px;
-    color: var(--app-text-secondary);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .hint-item:hover {
-    border-color: var(--app-accent);
-    color: var(--app-accent);
-  }
-
-  .chat-view__thinking-hint {
-    color: var(--app-text-muted);
-    font-style: italic;
-  }
-</style>
+<style scoped src="./chat-view.css"></style>

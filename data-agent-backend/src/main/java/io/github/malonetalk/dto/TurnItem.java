@@ -19,4 +19,8 @@ package io.github.malonetalk.dto;
 
 import java.util.List;
 
-public record TurnItem(String role, String content, List<ChatStreamEvent> traceSteps) {}
+public record TurnItem(
+        String role,
+        String content,
+        List<ChatStreamEvent> traceSteps,
+        List<ChatStreamEvent> timeline) {}

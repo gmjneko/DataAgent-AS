@@ -16,7 +16,8 @@
  */
 
 import { ref, shallowRef } from 'vue';
-import { streamChat, fetchSessionHistory, type ChatStreamEventType } from '@/api/agent';
+import { streamChat, fetchSessionHistory } from '@/api/agent';
+import { appendTimeline, restoreTimeline, type TimelineEvent } from '@/utils/chatTimeline';
 import { INTERACTIVE_TOOLS, isInteractiveTool } from '@/utils/interactiveTools';
 
 export interface PendingQuestion {
@@ -25,19 +26,12 @@ export interface PendingQuestion {
   question: string;
 }
 
-export interface TraceStep {
-  type: ChatStreamEventType;
-  content: string | null;
-  toolCall: { id: string; name: string; input: Record<string, unknown> } | null;
-  toolResult: { id: string; name: string; output: string } | null;
-  errorCode: string | null;
-}
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'agent';
   content: string;
-  traceSteps: TraceStep[];
+  timeline: TimelineEvent[];
+  outcome?: 'complete' | 'stopped' | 'error';
   isStreaming: boolean;
   timestamp: number;
 }
@@ -66,7 +60,7 @@ export function useAgentChat(initialSessionId?: string) {
       id: nextId(),
       role: 'user',
       content: text,
-      traceSteps: [],
+      timeline: [],
       isStreaming: false,
       timestamp: Date.now(),
     };
@@ -79,7 +73,7 @@ export function useAgentChat(initialSessionId?: string) {
       id: nextId(),
       role: 'agent',
       content: '',
-      traceSteps: [],
+      timeline: [],
       isStreaming: true,
       timestamp: Date.now(),
     };
@@ -90,7 +84,7 @@ export function useAgentChat(initialSessionId?: string) {
   function updateAgentMessage(msgId: string, updater: (msg: ChatMessage) => void) {
     messages.value = messages.value.map(m => {
       if (m.id !== msgId) return m;
-      const cloned = { ...m, traceSteps: [...m.traceSteps] };
+      const cloned = { ...m, timeline: [...m.timeline] };
       updater(cloned);
       return cloned;
     });
@@ -106,7 +100,8 @@ export function useAgentChat(initialSessionId?: string) {
       id: nextId(),
       role: (turn.role === 'USER' ? 'user' : 'agent') as 'user' | 'agent',
       content: turn.content,
-      traceSteps: turn.traceSteps,
+      timeline: restoreTimeline(turn.content, turn.traceSteps, turn.timeline),
+      outcome: 'complete',
       isStreaming: false,
       timestamp: Date.now(),
     }));
@@ -141,6 +136,8 @@ export function useAgentChat(initialSessionId?: string) {
     try {
       for await (const event of streamChat(request, controller.signal)) {
         updateAgentMessage(agentMsg.id, msg => {
+          msg.timeline = appendTimeline(msg.timeline, event);
+
           if (event.type === 'text' && event.content) {
             msg.content += event.content;
           }
@@ -155,17 +152,7 @@ export function useAgentChat(initialSessionId?: string) {
           }
 
           if (event.type === 'error') {
-            msg.content = msg.content || `请求失败: ${event.content ?? '请稍后重试'}`;
-            msg.traceSteps = [...msg.traceSteps, toTraceStep(event)];
-          }
-
-          if (event.type === 'thinking') {
-            const lastStep = msg.traceSteps[msg.traceSteps.length - 1];
-            if (lastStep && lastStep.type === 'thinking') {
-              lastStep.content = (lastStep.content ?? '') + (event.content ?? '');
-            } else {
-              msg.traceSteps = [...msg.traceSteps, toTraceStep(event)];
-            }
+            msg.outcome = 'error';
           }
 
           if (
@@ -173,8 +160,6 @@ export function useAgentChat(initialSessionId?: string) {
             event.type === 'tool_result' ||
             event.type === 'report'
           ) {
-            msg.traceSteps = [...msg.traceSteps, toTraceStep(event)];
-
             if (event.type === 'tool_call' && isInteractiveTool(event.toolCall?.name)) {
               const def = INTERACTIVE_TOOLS[event.toolCall!.name];
               pendingQuestion.value = {
@@ -193,32 +178,24 @@ export function useAgentChat(initialSessionId?: string) {
     } catch (e) {
       if ((e as Error).name !== 'AbortError') {
         updateAgentMessage(agentMsg.id, msg => {
-          msg.content = msg.content || `请求失败: ${(e as Error).message}`;
+          msg.outcome = 'error';
+          msg.timeline = appendTimeline(msg.timeline, {
+            type: 'error',
+            content: `请求失败: ${(e as Error).message}`,
+            toolCall: null,
+            toolResult: null,
+            errorCode: null,
+          });
         });
       }
     } finally {
       updateAgentMessage(agentMsg.id, msg => {
         msg.isStreaming = false;
+        msg.outcome ??= controller.signal.aborted ? 'stopped' : 'complete';
       });
       isStreaming.value = false;
       abortController.value = null;
     }
-  }
-
-  function toTraceStep(event: {
-    type: ChatStreamEventType;
-    content: string | null;
-    toolCall: TraceStep['toolCall'];
-    toolResult: TraceStep['toolResult'];
-    errorCode?: string | null;
-  }): TraceStep {
-    return {
-      type: event.type,
-      content: event.content,
-      toolCall: event.toolCall,
-      toolResult: event.toolResult,
-      errorCode: event.errorCode ?? null,
-    };
   }
 
   function stopStreaming() {

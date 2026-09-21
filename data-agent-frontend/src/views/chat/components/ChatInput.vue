@@ -158,47 +158,55 @@
       <span class="chat-input__question-label">Agent 提问：</span>
       <span class="chat-input__question-text">{{ props.pendingQuestion.question }}</span>
     </div>
-    <textarea
-      ref="textareaRef"
-      v-model="inputText"
-      class="chat-input__textarea"
-      :placeholder="
-        historyPreview !== null
-          ? historyPreview + '  (Tab 确认)'
-          : props.pendingQuestion && !isStreaming
-            ? '输入你的回答，Enter 发送...'
-            : isStreaming
-              ? '正在回复中...'
-              : '输入消息，Enter 发送，Shift+Enter 换行'
-      "
-      :disabled="isStreaming"
-      rows="1"
-      @keydown="handleKeydown"
-    />
-    <el-button
-      v-if="!isStreaming"
-      type="primary"
-      class="chat-input__send-btn"
-      :disabled="!inputText.trim()"
-      @click="handleSend"
-    >
-      发送
-    </el-button>
-    <el-button v-else type="danger" class="chat-input__send-btn" @click="emit('stop')">
-      停止
-    </el-button>
+    <div class="chat-input__composer">
+      <textarea
+        ref="textareaRef"
+        v-model="inputText"
+        class="chat-input__textarea"
+        :placeholder="
+          historyPreview !== null
+            ? historyPreview + '  (Tab 确认)'
+            : props.pendingQuestion && !isStreaming
+              ? '输入你的回答，Enter 发送...'
+              : isStreaming
+                ? '正在回复中...'
+                : '向 Data Agent 提问...'
+        "
+        :disabled="isStreaming"
+        rows="1"
+        @keydown="handleKeydown"
+      />
+      <div class="chat-input__toolbar">
+        <span class="chat-input__hint">Enter 发送 · Shift + Enter 换行</span>
+        <button
+          v-if="!isStreaming"
+          type="button"
+          class="chat-input__send-btn"
+          :disabled="!inputText.trim()"
+          title="发送消息"
+          @click="handleSend"
+        >
+          <el-icon :size="17"><Top /></el-icon>
+        </button>
+        <button
+          v-else
+          type="button"
+          class="chat-input__send-btn chat-input__send-btn--stop"
+          title="停止生成"
+          @click="emit('stop')"
+        >
+          <el-icon :size="15"><VideoPause /></el-icon>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
   .chat-input {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 10px;
-    padding: 16px 20px;
+    padding: 14px 32px 22px;
     background: var(--app-bg-card);
-    border-top: 1px solid var(--app-border);
+    border-top: 1px solid var(--app-border-light);
     transition:
       background-color 0.2s,
       border-color 0.2s;
@@ -206,6 +214,7 @@
 
   .chat-input__question-banner {
     width: 100%;
+    margin-bottom: 10px;
     padding: 8px 14px;
     background: var(--app-bg-page);
     border: 1px solid var(--app-border);
@@ -223,35 +232,88 @@
   }
 
   .chat-input__textarea {
-    flex: 1;
+    width: 100%;
     resize: none;
-    border: 1px solid var(--app-border);
+    border: none;
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 5px 2px;
     font-size: 14px;
     line-height: 1.5;
     font-family: inherit;
     outline: none;
-    background: var(--app-bg-input);
+    background: transparent;
     color: var(--app-text-primary);
     transition:
-      border-color 0.15s,
       background-color 0.2s,
       color 0.2s;
-    max-height: 160px;
+    max-height: 150px;
   }
 
   .chat-input__textarea:focus {
-    border-color: var(--app-accent);
+    outline: none;
   }
 
   .chat-input__textarea:disabled {
-    background: var(--app-bg-page);
     color: var(--app-text-muted);
   }
 
+  .chat-input__composer {
+    width: min(900px, 100%);
+    margin: 0 auto;
+    padding: 13px 15px 10px;
+    border: 1px solid var(--app-border);
+    border-radius: 13px;
+    background: var(--app-bg-input);
+    box-shadow: 0 2px 8px rgba(24, 24, 27, 0.04);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .chat-input__composer:focus-within {
+    border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+    box-shadow: 0 3px 14px rgba(24, 24, 27, 0.08);
+  }
+
+  .chat-input__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 7px;
+  }
+
+  .chat-input__hint {
+    color: var(--app-text-muted);
+    font-size: 11px;
+  }
+
   .chat-input__send-btn {
-    flex-shrink: 0;
-    height: 40px;
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    color: var(--app-accent-text);
+    background: var(--app-accent);
+    cursor: pointer;
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
+  }
+
+  .chat-input__send-btn:disabled {
+    cursor: default;
+    opacity: 0.3;
+  }
+
+  .chat-input__send-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .chat-input__send-btn--stop {
+    color: #fff;
+    background: #dc2626;
   }
 </style>

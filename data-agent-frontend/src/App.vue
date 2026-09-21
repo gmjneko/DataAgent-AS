@@ -32,7 +32,7 @@
     <AppHeader />
     <div class="app-main">
       <AppSidebar />
-      <main class="app-content">
+      <main class="app-content" :class="{ 'app-content--chat': route.path.startsWith('/chat') }">
         <RouterView />
       </main>
     </div>
@@ -60,5 +60,10 @@
     padding: 20px;
     background-color: var(--app-bg-page);
     transition: background-color 0.2s;
+  }
+
+  .app-content--chat {
+    padding: 0;
+    overflow: hidden;
   }
 </style>
