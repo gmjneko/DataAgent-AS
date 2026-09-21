@@ -33,23 +33,28 @@ import java.util.List;
 import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
+/** Adapts application skill sources to AgentScope repositories; Harness manages skill loading. */
 @Slf4j
-@Service
+@Configuration(proxyBeanMethods = false)
 @RequiredArgsConstructor
-public class SkillLoaderService {
+public class SkillRepositoryConfiguration {
 
     private final SkillProperties skillProperties;
     private final List<AgentSkillRepository> repositories = new ArrayList<>();
 
-    public List<AgentSkillRepository> repositories() {
-        return createRepositories();
+    @Bean
+    public List<AgentSkillRepository> skillRepositories() {
+        configureFilesystem();
+        configureGit();
+        configureClasspath();
+        configureNacos();
+        return List.copyOf(repositories);
     }
 
-    List<AgentSkillRepository> createRepositories() {
-        List<AgentSkillRepository> repos = new ArrayList<>();
-
+    private void configureFilesystem() {
         for (SkillProperties.FileSystemSource fs : skillProperties.getFilesystem()) {
             try {
                 Path resolvedPath = Path.of(fs.getPath()).toAbsolutePath().normalize();
@@ -60,12 +65,14 @@ public class SkillLoaderService {
                 FileSystemSkillRepository repo =
                         new FileSystemSkillRepository(
                                 resolvedPath, fs.isWriteable(), fs.getSource());
-                repos.add(repo);
+                repositories.add(repo);
             } catch (Exception e) {
                 log.error("Failed to create FileSystemSkillRepository: {}", fs.getPath(), e);
             }
         }
+    }
 
+    private void configureGit() {
         for (SkillProperties.GitSource gs : skillProperties.getGit()) {
             try {
                 Path localPath = gs.getLocalPath() != null ? Path.of(gs.getLocalPath()) : null;
@@ -76,24 +83,28 @@ public class SkillLoaderService {
                                 localPath,
                                 gs.getSource(),
                                 gs.isAutoSync());
-                repos.add(repo);
+                repositories.add(repo);
                 log.info("Created GitSkillRepository: {}", gs.getUrl());
             } catch (Exception e) {
                 log.error("Failed to create GitSkillRepository: {}", gs.getUrl(), e);
             }
         }
+    }
 
+    private void configureClasspath() {
         for (SkillProperties.ClasspathSource cs : skillProperties.getClasspath()) {
             try {
                 ClasspathSkillRepository repo =
                         new ClasspathSkillRepository(cs.getResourcePath(), cs.getSource());
-                repos.add(repo);
+                repositories.add(repo);
                 log.info("Created ClasspathSkillRepository: {}", cs.getResourcePath());
             } catch (Exception e) {
                 log.error("Failed to create ClasspathSkillRepository: {}", cs.getResourcePath(), e);
             }
         }
+    }
 
+    private void configureNacos() {
         for (SkillProperties.NacosSource ns : skillProperties.getNacos()) {
             try {
                 AiService aiService = createNacosAiService(ns);
@@ -105,7 +116,7 @@ public class SkillLoaderService {
                 if (ns.getSkillLabel() != null) {
                     props.setProperty(NacosSkillRepository.SKILL_LABEL_PATH, ns.getSkillLabel());
                 }
-                repos.add(
+                repositories.add(
                         new NacosSkillRepository(
                                 aiService, ns.getNamespace(), props, ns.getSkillNames()));
             } catch (Exception e) {
@@ -115,9 +126,6 @@ public class SkillLoaderService {
                         e);
             }
         }
-
-        repositories.addAll(repos);
-        return repos;
     }
 
     private AiService createNacosAiService(SkillProperties.NacosSource ns) throws NacosException {

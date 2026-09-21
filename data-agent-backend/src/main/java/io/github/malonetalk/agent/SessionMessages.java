@@ -21,30 +21,29 @@ import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolResultState;
+
 import java.util.List;
 
-/** Compatibility for 2.0.2, which emits terminal result events but stores default RUNNING blocks. */
+/**
+ * Compatibility for 2.0.2, which emits terminal result events but stores default RUNNING blocks.
+ */
 final class SessionMessages {
-    private SessionMessages() {}
+    private SessionMessages() {
+    }
 
     static Msg normalize(Msg message) {
-        List<ContentBlock> content =
-                message.getContent().stream()
-                        .map(
-                                block -> {
-                                    if (block instanceof ToolResultBlock result
-                                            && result.getState() == ToolResultState.RUNNING
-                                            && !Boolean.TRUE.equals(
-                                                    result.getMetadata()
-                                                            .get(
-                                                                    ToolResultBlock
-                                                                            .METADATA_SUSPENDED))) {
-                                        return (ContentBlock)
-                                                result.withState(ToolResultState.SUCCESS);
-                                    }
-                                    return block;
-                                })
-                        .toList();
+        List<ContentBlock> content = message.getContent().stream()
+                .map(block -> {
+                    if (block instanceof ToolResultBlock result
+                            && result.getState() == ToolResultState.RUNNING
+                            && !Boolean.TRUE.equals(
+                            result.getMetadata()
+                                    .get(ToolResultBlock.METADATA_SUSPENDED))) {
+                        return result.withState(ToolResultState.SUCCESS);
+                    }
+                    return block;
+                })
+                .toList();
         return message.withContent(content);
     }
 }

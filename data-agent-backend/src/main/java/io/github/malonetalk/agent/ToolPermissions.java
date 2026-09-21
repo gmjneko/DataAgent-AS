@@ -21,11 +21,15 @@ import io.agentscope.core.permission.PermissionBehavior;
 import io.agentscope.core.permission.PermissionContextState;
 import io.agentscope.core.permission.PermissionMode;
 import io.agentscope.core.permission.PermissionRule;
+
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.springframework.stereotype.Component;
 
-/** Only application-registered tools are allowed; disabled MCP tools lose their rules. */
+/**
+ * Only application-registered tools are allowed; disabled MCP tools lose their rules.
+ */
 @Component
 public class ToolPermissions {
     private final Set<String> allowed = ConcurrentHashMap.newKeySet();
@@ -42,15 +46,12 @@ public class ToolPermissions {
         var builder = PermissionContextState.builder().mode(PermissionMode.DONT_ASK);
         allowed.stream()
                 .sorted()
-                .forEach(
-                        name ->
-                                builder.addAllowRule(
-                                        name,
-                                        new PermissionRule(
-                                                name,
-                                                null,
-                                                PermissionBehavior.ALLOW,
-                                                "data-agent")));
+                .forEach(name ->
+                        builder.addAllowRule(
+                                name,
+                                new PermissionRule(name, null, PermissionBehavior.ALLOW, "data-agent")
+                        )
+                );
         return builder.build();
     }
 }

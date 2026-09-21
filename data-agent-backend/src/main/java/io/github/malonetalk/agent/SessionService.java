@@ -24,25 +24,27 @@ import io.agentscope.core.state.AgentState;
 import io.agentscope.core.state.AgentStateStore;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.github.malonetalk.common.ErrorCode;
+import io.github.malonetalk.dto.SessionDatasourceBinding;
 import io.github.malonetalk.dto.SessionInfo;
 import io.github.malonetalk.dto.TurnItem;
 import io.github.malonetalk.entity.UserSession;
 import io.github.malonetalk.exception.BusinessException;
 import io.github.malonetalk.mapper.SessionDatasourceMapper;
 import io.github.malonetalk.mapper.UserSessionMapper;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class SessionService {
-    private final ObjectProvider<HarnessAgent> agent;
+    private final HarnessAgent agent;
     private final SessionOperations operations;
     private final AgentStateStore stateStore;
     private final SessionTranscript transcript;
@@ -92,9 +94,9 @@ public class SessionService {
 
     private void clearSessionState(String sessionId, Integer userId) {
         String owner = String.valueOf(owner(sessionId, userId));
-        agent.getObject().clearContext(owner, sessionId);
+        agent.clearContext(owner, sessionId);
         stateStore.delete(owner, sessionId);
-        agent.getObject().clearStateCache(owner, sessionId);
+        agent.clearStateCache(owner, sessionId);
         transcript.delete(owner, sessionId);
         sessionDatasourceMapper.deleteBySessionId(sessionId);
         userSessionMapper.deleteBySessionId(sessionId);
@@ -112,47 +114,40 @@ public class SessionService {
         var bindings = sessionDatasourceMapper.listBindingsWithDatasourceName();
         return userSessionMapper.selectAll().stream()
                 .filter(session -> userId == null || Objects.equals(userId, session.getUserId()))
-                .filter(
-                        session ->
-                                stateStore.exists(
-                                        String.valueOf(session.getUserId()),
-                                        session.getSessionId()))
-                .map(
-                        session -> {
-                            String id = session.getSessionId();
-                            String uid = String.valueOf(session.getUserId());
-                            List<Msg> messages = transcript.read(uid, id);
-                            String title =
-                                    messages.stream()
-                                            .filter(msg -> msg.getRole() == MsgRole.USER)
-                                            .flatMap(msg -> msg.getContent().stream())
-                                            .filter(TextBlock.class::isInstance)
-                                            .map(TextBlock.class::cast)
-                                            .map(TextBlock::getText)
-                                            .findFirst()
-                                            .orElse(id);
-                            String created = session.getCreateTime().toString();
-                            String updated = created;
-                            try {
-                                updated =
-                                        Files.getLastModifiedTime(transcript.path(uid, id))
-                                                .toInstant()
-                                                .toString();
-                            } catch (IOException ignored) {
-                                /* No transcript yet. */
-                            }
-                            var binding =
-                                    bindings.stream()
-                                            .filter(row -> id.equals(row.getSessionId()))
-                                            .findFirst();
-                            return new SessionInfo(
-                                    id,
-                                    title.substring(0, Math.min(title.length(), 30)),
-                                    created,
-                                    updated,
-                                    binding.map(row -> row.getDatasourceId()).orElse(null),
-                                    binding.map(row -> row.getDatasourceName()).orElse(null));
-                        })
+                .filter(session ->
+                        stateStore.exists(String.valueOf(session.getUserId()), session.getSessionId()))
+                .map(session -> {
+                    String id = session.getSessionId();
+                    String uid = String.valueOf(session.getUserId());
+                    List<Msg> messages = transcript.read(uid, id);
+                    String title = messages.stream()
+                            .filter(msg -> msg.getRole() == MsgRole.USER)
+                            .flatMap(msg -> msg.getContent().stream())
+                            .filter(TextBlock.class::isInstance)
+                            .map(TextBlock.class::cast)
+                            .map(TextBlock::getText)
+                            .findFirst()
+                            .orElse(id);
+                    String created = session.getCreateTime().toString();
+                    String updated = created;
+                    try {
+                        updated = Files.getLastModifiedTime(transcript.path(uid, id))
+                                .toInstant()
+                                .toString();
+                    } catch (IOException ignored) {
+                        /* No transcript yet. */
+                    }
+                    var binding = bindings.stream()
+                            .filter(row -> id.equals(row.getSessionId()))
+                            .findFirst();
+                    return new SessionInfo(
+                            id,
+                            title.substring(0, Math.min(title.length(), 30)),
+                            created,
+                            updated,
+                            binding.map(SessionDatasourceBinding::getDatasourceId).orElse(null),
+                            binding.map(SessionDatasourceBinding::getDatasourceName).orElse(null));
+                })
                 .sorted(Comparator.comparing(SessionInfo::lastActiveAt).reversed())
                 .toList();
     }

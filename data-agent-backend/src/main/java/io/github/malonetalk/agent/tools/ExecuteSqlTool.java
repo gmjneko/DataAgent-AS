@@ -41,13 +41,13 @@ public class ExecuteSqlTool implements MarkAgentTool {
             concurrencySafe = true,
             readOnly = true,
             name = "execute_sql",
-            description =
-                    "Execute SELECT SQL query on the target datasource and return the query result."
-                        + " Only supports SELECT queries, does not support INSERT/UPDATE/DELETE or"
-                        + " other modification operations.")
+            description = "Execute SELECT SQL query on the target datasource and return the query result."
+                    + " Only supports SELECT queries, does not support INSERT/UPDATE/DELETE or"
+                    + " other modification operations."
+    )
     public ToolResultBlock executeSql(
             @ToolParam(name = "sql", description = "The SELECT SQL query statement to execute")
-                    String sql,
+            String sql,
             RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {

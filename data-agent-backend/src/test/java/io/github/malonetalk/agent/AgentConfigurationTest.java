@@ -40,7 +40,6 @@ import io.agentscope.core.state.State;
 import io.agentscope.core.tool.Tool;
 import io.github.malonetalk.agent.models.ModelFactory;
 import io.github.malonetalk.agent.models.ModelProperties;
-import io.github.malonetalk.agent.skill.SkillLoaderService;
 import io.github.malonetalk.agent.tools.MarkAgentTool;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -125,8 +124,6 @@ class AgentConfigurationTest {
         Model model = probeModel();
         ModelFactory factory = mock(ModelFactory.class);
         when(factory.getInstance(any())).thenReturn(model);
-        SkillLoaderService skills = mock(SkillLoaderService.class);
-        when(skills.repositories()).thenReturn(List.of());
         ContextProbe probe = new ContextProbe();
         try (var agent =
                 new AgentConfiguration()
@@ -136,7 +133,7 @@ class AgentConfigurationTest {
                                 properties,
                                 List.of(probe),
                                 store,
-                                skills,
+                                List.of(),
                                 permissions,
                                 transcript)) {
             var context =

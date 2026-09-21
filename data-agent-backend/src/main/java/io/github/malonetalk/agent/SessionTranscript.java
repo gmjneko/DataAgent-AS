@@ -24,6 +24,7 @@ import io.agentscope.core.message.ToolResultState;
 import io.agentscope.core.util.JsonUtils;
 import io.agentscope.harness.agent.memory.compaction.ConversationCompactor;
 import io.agentscope.harness.agent.workspace.WorkspaceConstants;
+
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -33,10 +34,13 @@ import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Full-fidelity companion to Harness's rendered session log; preserves tool blocks for the UI. */
+/**
+ * Full-fidelity companion to Harness's rendered session log; preserves tool blocks for the UI.
+ */
 @Component
 @RequiredArgsConstructor
 public class SessionTranscript {
@@ -75,14 +79,12 @@ public class SessionTranscript {
             String data = Files.readString(path);
             // A crash can leave the last append incomplete. Complete records remain readable.
             String committed = data.substring(0, data.lastIndexOf('\n') + 1);
-            committed
-                    .lines()
+            committed.lines()
                     .filter(line -> !line.isBlank())
-                    .forEach(
-                            line -> {
-                                Msg message = JsonUtils.getJsonCodec().fromJson(line, Msg.class);
-                                messages.put(message.getId(), message);
-                            });
+                    .forEach(line -> {
+                        Msg message = JsonUtils.getJsonCodec().fromJson(line, Msg.class);
+                        messages.put(message.getId(), message);
+                    });
             return messages;
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read session history", e);
@@ -103,13 +105,11 @@ public class SessionTranscript {
             Msg previous = existing.get(message.getId());
             // A terminal tool result is immutable in history, even when the model view is
             // offloaded.
-            if (previous != null
-                    && previous.getContent().stream()
-                            .anyMatch(
-                                    block ->
-                                            block instanceof ToolResultBlock result
-                                                    && result.getState()
-                                                            != ToolResultState.RUNNING)) {
+            if (previous != null && previous.getContent().stream()
+                    .anyMatch(block ->
+                            block instanceof ToolResultBlock result
+                                    && result.getState()
+                                    != ToolResultState.RUNNING)) {
                 continue;
             }
             existing.put(message.getId(), message);
@@ -125,10 +125,9 @@ public class SessionTranscript {
             if (Files.exists(path)) {
                 String data = Files.readString(path);
                 if (!data.endsWith("\n")) {
-                    int length =
-                            data.substring(0, data.lastIndexOf('\n') + 1)
-                                    .getBytes(StandardCharsets.UTF_8)
-                                    .length;
+                    int length = data.substring(0, data.lastIndexOf('\n') + 1)
+                            .getBytes(StandardCharsets.UTF_8)
+                            .length;
                     try (var file = FileChannel.open(path, StandardOpenOption.WRITE)) {
                         file.truncate(length);
                     }

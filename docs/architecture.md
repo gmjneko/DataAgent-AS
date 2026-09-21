@@ -94,4 +94,4 @@
 
 `DataAgentStateStore` 基于 MysqlAgentStateStore，独立状态表保存模型上下文；`DataAgentMiddleware` 在压缩与结果卸载之前写入结构化消息日志，`SessionService` 从工作区读取完整历史。旧 agentscope_sessions 不参与新状态恢复。
 
-`McpToolRegistryService` 管理外部客户端与 Harness Toolkit 的注册、工具过滤和撤销，同时维护显式允许规则。管理接口仅供超级管理员，启用工具面向全部登录用户。SkillLoaderService 使用 2.x SkillRepository。详见 [配置与迁移说明](agentscope-v2-upgrade.md)。
+`McpToolRegistryService` 管理外部客户端与 Harness Toolkit 的注册、工具过滤和撤销，同时维护显式允许规则。管理接口仅供超级管理员，启用工具面向全部登录用户。`SkillRepositoryConfiguration` 将四类 Skill 来源装配为单例仓库列表，由 Spring 管理生命周期，HarnessAgent 负责 Skill 的发现与加载。详见 [配置与迁移说明](agentscope-v2-upgrade.md)。

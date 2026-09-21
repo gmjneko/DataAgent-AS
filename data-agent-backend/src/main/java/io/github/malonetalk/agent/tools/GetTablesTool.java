@@ -26,7 +26,9 @@ import io.github.malonetalk.entity.Datasource;
 import io.github.malonetalk.exception.ToolExceptionMapper;
 import io.github.malonetalk.service.DatasourceService;
 import io.github.malonetalk.service.semantic.table.TableSemanticService;
+
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -42,32 +44,29 @@ public class GetTablesTool implements MarkAgentTool {
             concurrencySafe = true,
             readOnly = true,
             name = "get_tables",
-            description =
-                    """
+            description = """
                     Get synced semantic-layer table information, including table name, domain, \
                     description, data granularity (what one row represents) and enabled relations.\
-                    """)
+                    """
+    )
     public ToolResultBlock getTables(
             @ToolParam(
-                            name = "domains",
-                            description =
-                                    """
-                                    Optional list of domain names. Only tables belonging to these \
-                                    domains will be returned. If not provided or empty, \
-                                    returns all tables.\
-                                    """,
-                            required = false)
-                    List<String> domains,
+                    name = "domains",
+                    description = """
+                            Optional list of domain names. Only tables belonging to these \
+                            domains will be returned. If not provided or empty, \
+                            returns all tables.\
+                            """,
+                    required = false)
+            List<String> domains,
             RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
-                    Datasource dataSource =
-                            dataSourceService.getDatasourceForSession(ctx.getSessionId());
+                    Datasource dataSource = dataSourceService.getDatasourceForSession(ctx.getSessionId());
                     return ToolResultBlock.text(
-                            JsonUtils.getJsonCodec()
-                                            .toJson(
-                                                    tableSemanticService.listMergedTablesByDomains(
-                                                            dataSource.getId(), domains))
+                            JsonUtils.getJsonCodec().toJson(
+                                    tableSemanticService.listMergedTablesByDomains(
+                                            dataSource.getId(), domains))
                                     + ToolCallConstants.METRIC_CALIBER_REMINDER);
                 });
     }

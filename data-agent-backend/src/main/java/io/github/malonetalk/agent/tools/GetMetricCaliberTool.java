@@ -35,8 +35,7 @@ public class GetMetricCaliberTool implements MarkAgentTool {
             concurrencySafe = true,
             readOnly = true,
             name = "get_metric_caliber",
-            description =
-                    """
+            description = """
                     Get the precise business caliber (definition) of a metric when you are unsure \
                     how it should be computed — which measure expression to use, which time field \
                     to apply, or whether test data should be excluded. It returns the metric's \
@@ -44,18 +43,19 @@ public class GetMetricCaliberTool implements MarkAgentTool {
                     the exact caliber of a mentioned metric is unclear before generating SQL. \
                     You may pass the user's question verbatim: the matcher scans the question for \
                     known metric names and aliases, so there is no need to distill it to a keyword.\
-                    """)
+                    """
+    )
     public String getMetricCaliber(
             @ToolParam(
-                            name = "hint",
-                            description =
-                                    "A metric name, or the user's question verbatim, e.g. 流水 /"
-                                            + " 销售额 / 上个月的GMV是多少")
-                    String hint) {
+                    name = "hint",
+                    description = "A metric name, or the user's question verbatim, e.g. 流水 /"
+                            + " 销售额 / 上个月的GMV是多少"
+            )
+            String hint) {
         try {
             return metricService.getCaliberByHint(hint);
         } catch (Exception e) {
-            log.error("Failed to get metric caliber: " + hint, e);
+            log.error("Failed to get metric caliber: {}", hint, e);
             return "Failed to get metric caliber: " + e.getMessage();
         }
     }

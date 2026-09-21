@@ -36,15 +36,13 @@ public class GetDomainsTool implements MarkAgentTool {
             concurrencySafe = true,
             readOnly = true,
             name = "get_domains",
-            description =
-                    "Get available data domains, including domain names and descriptions. Call"
-                            + " this tool first to choose the most relevant domains before querying"
-                            + " tables.")
+            description = "Get available data domains, including domain names and descriptions. Call"
+                    + " this tool first to choose the most relevant domains before querying"
+                    + " tables."
+    )
     public ToolResultBlock getDomains() {
         return toolExceptionMapper.run(
-                () ->
-                        ToolResultBlock.text(
-                                JsonUtils.getJsonCodec()
-                                        .toJson(domainService.listDomainPrompts())));
+                () -> ToolResultBlock.text(
+                        JsonUtils.getJsonCodec().toJson(domainService.listDomainPrompts())));
     }
 }

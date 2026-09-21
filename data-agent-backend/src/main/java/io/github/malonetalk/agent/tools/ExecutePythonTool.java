@@ -19,6 +19,7 @@ package io.github.malonetalk.agent.tools;
 
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,6 +27,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -40,8 +42,7 @@ public class ExecutePythonTool implements MarkAgentTool {
     @Tool(
             concurrencySafe = true,
             name = "execute_python",
-            description =
-                    """
+            description = """
                     Execute Python code for data analysis. \
                     Available libraries: pandas, numpy, scipy. \
                     SQL query results have already been obtained in the conversation; \
@@ -49,16 +50,17 @@ public class ExecutePythonTool implements MarkAgentTool {
                     Print analysis results to stdout using print(). \
                     Only use this when statistical computation \
                     (correlation, regression, distribution tests, etc.) cannot be done in SQL.\
-                    """)
+                    """
+    )
     public String executePython(
             @ToolParam(
-                            name = "code",
-                            description =
-                                    """
-                                    Python code to execute for data analysis. \
-                                    Must be self-contained and include any data inline.\
-                                    """)
-                    String code) {
+                    name = "code",
+                    description = """
+                            Python code to execute for data analysis. \
+                            Must be self-contained and include any data inline.\
+                            """
+            )
+            String code) {
 
         if (code == null || code.isBlank() || code.length() > 200000) {
             return "Error: code must contain 1 to 200000 characters.";
@@ -84,12 +86,11 @@ public class ExecutePythonTool implements MarkAgentTool {
             Files.writeString(script, code);
 
             Path outputFile = tmpDir.resolve("output.txt");
-            process =
-                    new ProcessBuilder("python3", "-I", script.toString())
-                            .directory(tmpDir.toFile())
-                            .redirectErrorStream(true)
-                            .redirectOutput(outputFile.toFile())
-                            .start();
+            process = new ProcessBuilder("python3", "-I", script.toString())
+                    .directory(tmpDir.toFile())
+                    .redirectErrorStream(true)
+                    .redirectOutput(outputFile.toFile())
+                    .start();
 
             boolean finished = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (!finished) {
@@ -124,14 +125,13 @@ public class ExecutePythonTool implements MarkAgentTool {
             if (tmpDir != null) {
                 try (var walk = Files.walk(tmpDir)) {
                     walk.sorted(Comparator.reverseOrder())
-                            .forEach(
-                                    p -> {
-                                        try {
-                                            Files.deleteIfExists(p);
-                                        } catch (IOException ignored) {
-                                            // best-effort cleanup
-                                        }
-                                    });
+                            .forEach(p -> {
+                                try {
+                                    Files.deleteIfExists(p);
+                                } catch (IOException ignored) {
+                                    // best-effort cleanup
+                                }
+                            });
                 } catch (IOException ignored) {
                     // best-effort cleanup
                 }

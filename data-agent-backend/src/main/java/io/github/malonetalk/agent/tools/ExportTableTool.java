@@ -40,15 +40,15 @@ public class ExportTableTool implements MarkAgentTool {
     @Tool(
             concurrencySafe = true,
             name = "export_table",
-            description =
-                    """
+            description = """
                     Export a SELECT query result to a CSV spreadsheet file and return a download link.
                     Use this after large data queries or when the user asks to export data.
                     Exports are capped at 10000 rows; add filters or LIMIT for larger tables.
-                    """)
+                    """
+    )
     public ToolResultBlock exportTable(
             @ToolParam(name = "sql", description = "The SELECT SQL query statement to export")
-                    String sql,
+            String sql,
             @ToolParam(name = "title", description = "A short title for this export") String title,
             RuntimeContext ctx) {
         return toolExceptionMapper.run(

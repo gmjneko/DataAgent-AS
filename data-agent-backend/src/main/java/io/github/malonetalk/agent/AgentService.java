@@ -36,8 +36,10 @@ import io.github.malonetalk.exception.ErrorResponse;
 import io.github.malonetalk.exception.ExceptionResponseMapper;
 import io.github.malonetalk.service.DatasourceService;
 import io.github.malonetalk.web.TraceIdFilter;
+
 import java.util.List;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -62,41 +64,30 @@ public class AgentService {
             List<ChatRequest.ToolResultInput> toolResults,
             Integer datasourceId) {
         String traceId = MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
-        return operations.stream(
-                        sessionId,
-                        () -> {
-                            sessions.bindUserSession(userId, sessionId);
-                            if (datasourceId != null) {
-                                datasources.bindSessionDatasource(sessionId, datasourceId);
-                            }
-                            RuntimeContext context =
-                                    RuntimeContext.builder()
-                                            .userId(String.valueOf(userId))
-                                            .sessionId(sessionId)
-                                            .put("traceId", traceId == null ? "" : traceId)
-                                            .put(
-                                                    "datasourceId",
-                                                    datasourceId == null ? "" : datasourceId)
-                                            .build();
-                            List<Msg> messages = buildInput(userId, sessionId, input, toolResults);
-                            var mapping = converter.newStreamMapper();
-                            return agent.streamEvents(messages, context)
-                                    .flatMapIterable(mapping)
-                                    .doFinally(
-                                            signal -> {
-                                                try (var ignored =
-                                                        MDC.putCloseable(
-                                                                TraceIdFilter.TRACE_ID_MDC_KEY,
-                                                                traceId)) {
-                                                    log.info(
-                                                            "SSE chat finished: userId={},"
-                                                                    + " sessionId={}, signal={}",
-                                                            userId,
-                                                            sessionId,
-                                                            signal);
-                                                }
-                                            });
-                        })
+
+        return operations.stream(sessionId, () -> {
+                    sessions.bindUserSession(userId, sessionId);
+                    if (datasourceId != null) {
+                        datasources.bindSessionDatasource(sessionId, datasourceId);
+                    }
+                    RuntimeContext context = RuntimeContext.builder()
+                            .userId(String.valueOf(userId))
+                            .sessionId(sessionId)
+                            .put("traceId", traceId == null ? "" : traceId)
+                            .put("datasourceId", datasourceId == null ? "" : datasourceId)
+                            .build();
+
+                    List<Msg> messages = buildInput(userId, sessionId, input, toolResults);
+                    var mapping = converter.newStreamMapper();
+
+                    return agent.streamEvents(messages, context)
+                            .flatMapIterable(mapping)
+                            .doFinally(signal -> {
+                                try (var ignored = MDC.putCloseable(TraceIdFilter.TRACE_ID_MDC_KEY, traceId)) {
+                                    log.info("SSE chat finished: userId={}, sessionId={}, signal={}", userId, sessionId, signal);
+                                }
+                            });
+                })
                 .onErrorResume(this::toErrorEvent)
                 // Keep the upstream alive after the SSE consumer disconnects so the framework can
                 // process the interrupt and persist state before releasing the session operation.
@@ -114,46 +105,43 @@ public class AgentService {
             return List.of(new UserMessage(input));
         }
         var state = agent.getDelegate().getAgentState(String.valueOf(userId), sessionId);
-        var completed =
-                state.getContext().stream()
-                        .flatMap(msg -> msg.getContent().stream())
-                        .filter(ToolResultBlock.class::isInstance)
-                        .map(ToolResultBlock.class::cast)
-                        .filter(result -> result.getState() != ToolResultState.RUNNING)
-                        .map(ToolResultBlock::getId)
-                        .collect(Collectors.toSet());
+        var completed = state.getContext().stream()
+                .flatMap(msg -> msg.getContent().stream())
+                .filter(ToolResultBlock.class::isInstance)
+                .map(ToolResultBlock.class::cast)
+                .filter(result -> result.getState() != ToolResultState.RUNNING)
+                .map(ToolResultBlock::getId)
+                .collect(Collectors.toSet());
+
         if (results.stream().map(ChatRequest.ToolResultInput::toolCallId).distinct().count()
                 != results.size()) {
             throw BusinessException.of(ErrorCode.BAD_REQUEST, "不能重复回答同一个问题");
         }
-        var pending =
-                state.getContext().stream()
-                        .flatMap(msg -> msg.getContent().stream())
-                        .filter(ToolUseBlock.class::isInstance)
-                        .map(ToolUseBlock.class::cast)
-                        .filter(
-                                tool ->
-                                        tool.getState() != ToolCallState.FINISHED
-                                                && !completed.contains(tool.getId()))
-                        .toList();
+
+        var pending = state.getContext().stream()
+                .flatMap(msg -> msg.getContent().stream())
+                .filter(ToolUseBlock.class::isInstance)
+                .map(ToolUseBlock.class::cast)
+                .filter(tool ->
+                        tool.getState() != ToolCallState.FINISHED
+                                && !completed.contains(tool.getId()))
+                .toList();
+
         for (var result : results) {
             if (pending.stream()
-                    .noneMatch(
-                            tool ->
-                                    tool.getId().equals(result.toolCallId())
-                                            && tool.getName().equals(result.toolName())
-                                            && "ask_user".equals(tool.getName()))) {
+                    .noneMatch(tool -> tool.getId().equals(result.toolCallId())
+                            && tool.getName().equals(result.toolName())
+                            && "ask_user".equals(tool.getName()))
+            ) {
                 throw BusinessException.of(ErrorCode.BAD_REQUEST, "不存在对应的待回答问题");
             }
         }
         return results.stream()
-                .<Msg>map(
-                        result ->
-                                new ToolResultMessage(
-                                        ToolResultBlock.text(result.output())
-                                                .withIdAndName(
-                                                        result.toolCallId(), result.toolName())
-                                                .withState(ToolResultState.SUCCESS)))
+                .<Msg>map(result -> new ToolResultMessage(
+                        ToolResultBlock.text(result.output())
+                                .withIdAndName(
+                                        result.toolCallId(), result.toolName()
+                                ).withState(ToolResultState.SUCCESS)))
                 .toList();
     }
 
@@ -171,6 +159,7 @@ public class AgentService {
                         .isLast(true)
                         .content(error.message())
                         .errorCode(error.errorCode().getCode())
-                        .build());
+                        .build()
+        );
     }
 }

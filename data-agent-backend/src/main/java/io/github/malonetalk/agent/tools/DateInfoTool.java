@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -35,6 +36,7 @@ import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Optional;
+
 import lombok.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -65,8 +67,7 @@ public class DateInfoTool implements MarkAgentTool {
             concurrencySafe = true,
             readOnly = true,
             name = "get_date_info",
-            description =
-                    """
+            description = """
                     Get accurate date information, including weekday, weekend, Chinese public \
                     holidays, holiday schedule adjustments, and optional difference to another \
                     date. Use this whenever the user asks about today, a date, weekday, whether a \
@@ -75,28 +76,29 @@ public class DateInfoTool implements MarkAgentTool {
                     start_date; omit start_date for today. Pass end_date only when a calendar-day \
                     difference is needed. Date difference counts start_date inclusive and \
                     end_date exclusive.\
-                    """)
+                    """
+    )
     public String getDateInfo(
             @ToolParam(
-                            name = "start_date",
-                            description =
-                                    "Date in yyyy-MM-dd format. Defaults to today. When end_date"
-                                            + " is provided, this acts as the start of the range.",
-                            required = false)
-                    String startDate,
+                    name = "start_date",
+                    description = "Date in yyyy-MM-dd format. Defaults to today. When end_date"
+                            + " is provided, this acts as the start of the range.",
+                    required = false
+            )
+            String startDate,
             @ToolParam(
-                            name = "end_date",
-                            description =
-                                    "Optional end date in yyyy-MM-dd format for date difference"
-                                            + " calculation.",
-                            required = false)
-                    String endDate,
+                    name = "end_date",
+                    description = "Optional end date in yyyy-MM-dd format for date difference"
+                            + " calculation.",
+                    required = false
+            )
+            String endDate,
             @ToolParam(
-                            name = "timezone",
-                            description =
-                                    "IANA timezone, e.g. Asia/Shanghai. Defaults to Asia/Shanghai.",
-                            required = false)
-                    String timezone) {
+                    name = "timezone",
+                    description = "IANA timezone, e.g. Asia/Shanghai. Defaults to Asia/Shanghai.",
+                    required = false
+            )
+            String timezone) {
         try {
             return objectMapper.writeValueAsString(resolve(startDate, endDate, timezone));
         } catch (Exception e) {
@@ -146,15 +148,13 @@ public class DateInfoTool implements MarkAgentTool {
                         .GET()
                         .build();
         try {
-            HttpResponse<String> response =
-                    httpClient.send(
+            HttpResponse<String> response = httpClient.send(
                             request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() != 200) {
                 return Optional.empty();
             }
 
-            HolidayApiResponse body =
-                    objectMapper.readValue(response.body(), HolidayApiResponse.class);
+            HolidayApiResponse body = objectMapper.readValue(response.body(), HolidayApiResponse.class);
             return body.code() == 0 ? Optional.of(body) : Optional.empty();
         } catch (IOException e) {
             return Optional.empty();
@@ -185,13 +185,17 @@ public class DateInfoTool implements MarkAgentTool {
             String holidayName,
             String dayType,
             boolean holidayDataAvailable,
-            DateDiff dateDiff) {}
+            DateDiff dateDiff) {
+    }
 
-    record DateDiff(long calendarDays, long absoluteCalendarDays) {}
+    record DateDiff(long calendarDays, long absoluteCalendarDays) {
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record HolidayApiResponse(int code, HolidayDetail holiday) {}
+    record HolidayApiResponse(int code, HolidayDetail holiday) {
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record HolidayDetail(Boolean holiday, String name) {}
+    record HolidayDetail(Boolean holiday, String name) {
+    }
 }

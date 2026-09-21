@@ -24,9 +24,11 @@ import io.agentscope.core.middleware.AgentInput;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.middleware.ReasoningInput;
 import io.agentscope.core.state.AgentStateStore;
+
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.function.Function;
+
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -43,16 +45,11 @@ public class DataAgentMiddleware implements MiddlewareBase {
             AgentInput input,
             Function<AgentInput, Flux<AgentEvent>> next) {
         return next.apply(input)
-                .doOnError(
-                        error -> {
-                            // 2.0.2 persists successful calls automatically; retain recoverable
-                            // state on failure too.
-                            store.save(
-                                    context.getUserId(),
-                                    context.getSessionId(),
-                                    "agent_state",
-                                    context.getAgentState());
-                        });
+                .doOnError(error -> {
+                    // 2.0.2 persists successful calls automatically; retain recoverable
+                    // state on failure too.
+                    store.save(context.getUserId(), context.getSessionId(), "agent_state", context.getAgentState());
+                });
     }
 
     @Override
@@ -62,17 +59,16 @@ public class DataAgentMiddleware implements MiddlewareBase {
             ReasoningInput input,
             Function<ReasoningInput, Flux<AgentEvent>> next) {
         // Registered outside the compaction middleware: archive blocks before they are shortened.
-        transcript.append(
-                context.getUserId(), context.getSessionId(), context.getAgentState().getContext());
+        transcript.append(context.getUserId(), context.getSessionId(), context.getAgentState().getContext());
         return next.apply(input);
     }
 
     @Override
     public Mono<String> onSystemPrompt(Agent agent, RuntimeContext context, String prompt) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Shanghai"));
-        return Mono.just(
-                prompt
-                        + "\n当前时区 Asia/Shanghai；今天 %s，昨天 %s，明天 %s。相对日期先换算，日期计算使用 get_date_info。"
-                                .formatted(today, today.minusDays(1), today.plusDays(1)));
+        return Mono.just(prompt
+                + "\n当前时区 Asia/Shanghai；今天 %s，昨天 %s，明天 %s。相对日期先换算，日期计算使用 get_date_info。"
+                .formatted(today, today.minusDays(1), today.plusDays(1))
+        );
     }
 }

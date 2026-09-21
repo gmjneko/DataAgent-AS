@@ -27,7 +27,9 @@ import io.github.malonetalk.exception.ToolExceptionMapper;
 import io.github.malonetalk.service.DatasourceService;
 import io.github.malonetalk.service.semantic.column.ColumnSemanticService;
 import io.github.malonetalk.utils.SemanticUtils;
+
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -43,23 +45,21 @@ public class GetTableSchemaTool implements MarkAgentTool {
             concurrencySafe = true,
             readOnly = true,
             name = "get_table_schema",
-            description =
-                    """
+            description = """
                     Get synced semantic-layer schema information for the specified table, \
                     including column name, physical data type, semantic type, primary key flag, \
                     index hints and column descriptions. Call this tool before generating SQL.\
-                    """)
+                    """
+    )
     public ToolResultBlock getTableSchema(
             @ToolParam(name = "table_name", description = "The table name to query schema for")
-                    String tableName,
+            String tableName,
             RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
-                    Datasource datasource =
-                            dataSourceService.getDatasourceForSession(ctx.getSessionId());
-                    List<ColumnPromptResponse> columns =
-                            columnSemanticService.getMergedTableSchema(
-                                    datasource.getId(), tableName);
+                    Datasource datasource = dataSourceService.getDatasourceForSession(ctx.getSessionId());
+                    List<ColumnPromptResponse> columns = columnSemanticService.getMergedTableSchema(
+                            datasource.getId(), tableName);
                     return ToolResultBlock.text(
                             SemanticUtils.formatTableSchema(tableName, columns)
                                     + ToolCallConstants.METRIC_CALIBER_REMINDER);

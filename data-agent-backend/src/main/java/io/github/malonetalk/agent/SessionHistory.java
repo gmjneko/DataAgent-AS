@@ -30,9 +30,11 @@ import io.github.malonetalk.convertor.handler.ToolResultHandler;
 import io.github.malonetalk.dto.ChatStreamEvent;
 import io.github.malonetalk.dto.TurnItem;
 import io.github.malonetalk.enums.ChatStreamEventType;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -53,12 +55,11 @@ public class SessionHistory {
                     turns.add(buildAgentTurn(agentBlocks));
                     agentBlocks = null;
                 }
-                String text =
-                        msg.getContent().stream()
-                                .filter(block -> block instanceof TextBlock)
-                                .map(block -> ((TextBlock) block).getText())
-                                .filter(t -> t != null && !t.isEmpty())
-                                .collect(Collectors.joining());
+                String text = msg.getContent().stream()
+                        .filter(block -> block instanceof TextBlock)
+                        .map(block -> ((TextBlock) block).getText())
+                        .filter(t -> t != null && !t.isEmpty())
+                        .collect(Collectors.joining());
                 turns.add(new TurnItem(MsgRole.USER.name(), text, List.of(), List.of()));
             } else {
                 if (agentBlocks == null) {
@@ -82,11 +83,10 @@ public class SessionHistory {
             if (block instanceof TextBlock tb) {
                 if (tb.getText() != null && !tb.getText().isEmpty()) {
                     content.append(tb.getText());
-                    timeline.add(
-                            ChatStreamEvent.builder()
-                                    .type(ChatStreamEventType.TEXT)
-                                    .content(tb.getText())
-                                    .build());
+                    timeline.add(ChatStreamEvent.builder()
+                            .type(ChatStreamEventType.TEXT)
+                            .content(tb.getText())
+                            .build());
                 }
             } else if (block instanceof ThinkingBlock tb) {
                 appendThinking(timeline, tb);
@@ -97,10 +97,9 @@ public class SessionHistory {
             }
         }
 
-        List<ChatStreamEvent> traceSteps =
-                timeline.stream()
-                        .filter(event -> event.type() != ChatStreamEventType.TEXT)
-                        .toList();
+        List<ChatStreamEvent> traceSteps = timeline.stream()
+                .filter(event -> event.type() != ChatStreamEventType.TEXT)
+                .toList();
         return new TurnItem(MsgRole.ASSISTANT.name(), content.toString(), traceSteps, timeline);
     }
 
@@ -111,11 +110,7 @@ public class SessionHistory {
         }
         int lastIdx = traceSteps.size() - 1;
         if (lastIdx >= 0 && traceSteps.get(lastIdx).type() == ChatStreamEventType.THINKING) {
-            String merged =
-                    (traceSteps.get(lastIdx).content() != null
-                                    ? traceSteps.get(lastIdx).content()
-                                    : "")
-                            + thinking;
+            String merged = (traceSteps.get(lastIdx).content() != null ? traceSteps.get(lastIdx).content() : "") + thinking;
             traceSteps.set(lastIdx, thinkingEvent(merged));
         } else {
             traceSteps.add(thinkingEvent(thinking));
@@ -128,7 +123,8 @@ public class SessionHistory {
                         .type(ChatStreamEventType.TOOL_CALL)
                         .toolCall(
                                 new ChatStreamEvent.ToolCallInfo(
-                                        tub.getId(), tub.getName(), tub.getInput()))
+                                        tub.getId(), tub.getName(), tub.getInput())
+                        )
                         .build());
         if ("ask_user".equals(tub.getName()) && tub.getState() != ToolCallState.FINISHED) {
             traceSteps.add(
@@ -146,21 +142,16 @@ public class SessionHistory {
         if ("ask_user".equals(trb.getName()) && trb.getState() == ToolResultState.RUNNING) {
             return; // The original tool call already supplies the full question.
         }
-        String outputText =
-                trb.getOutput().stream()
-                        .filter(b -> b instanceof TextBlock)
-                        .map(b -> ((TextBlock) b).getText())
-                        .filter(t -> t != null && !t.isEmpty())
-                        .collect(Collectors.joining("\n"));
-        traceSteps.add(
-                handlers.stream()
-                        .filter(handler -> handler.supports(trb, outputText))
-                        .findFirst()
-                        .map(handler -> handler.handle(trb, outputText, null, false))
-                        .orElseGet(
-                                () ->
-                                        ToolResultHandler.defaultHandle(
-                                                trb, outputText, null, false)));
+        String outputText = trb.getOutput().stream()
+                .filter(b -> b instanceof TextBlock)
+                .map(b -> ((TextBlock) b).getText())
+                .filter(t -> t != null && !t.isEmpty())
+                .collect(Collectors.joining("\n"));
+        traceSteps.add(handlers.stream()
+                .filter(handler -> handler.supports(trb, outputText))
+                .findFirst()
+                .map(handler -> handler.handle(trb, outputText, null, false))
+                .orElseGet(() -> ToolResultHandler.defaultHandle(trb, outputText, null, false)));
     }
 
     private static ChatStreamEvent thinkingEvent(String thinking) {

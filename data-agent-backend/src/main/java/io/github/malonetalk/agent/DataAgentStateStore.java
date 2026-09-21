@@ -20,9 +20,12 @@ package io.github.malonetalk.agent;
 import io.agentscope.core.state.AgentState;
 import io.agentscope.core.state.State;
 import io.agentscope.extensions.mysql.state.MysqlAgentStateStore;
+
 import java.util.Optional;
 
-/** Refreshes tool rules at load time, before the framework constructs its permission engine. */
+/**
+ * Refreshes tool rules at load time, before the framework constructs its permission engine.
+ */
 public class DataAgentStateStore extends MysqlAgentStateStore {
     private final ToolPermissions permissions;
     private final SessionTranscript transcript;
@@ -39,18 +42,14 @@ public class DataAgentStateStore extends MysqlAgentStateStore {
     }
 
     @Override
-    public <T extends State> Optional<T> get(
-            String user, String session, String key, Class<T> type) {
+    public <T extends State> Optional<T> get(String user, String session, String key, Class<T> type) {
         Optional<T> result = super.get(user, session, key, type);
         if (type == AgentState.class && "agent_state".equals(key)) {
-            AgentState state =
-                    result.map(AgentState.class::cast)
-                            .orElseGet(
-                                    () ->
-                                            AgentState.builder()
-                                                    .userId(user)
-                                                    .sessionId(session)
-                                                    .build());
+            AgentState state = result.map(AgentState.class::cast)
+                    .orElseGet(() -> AgentState.builder()
+                            .userId(user)
+                            .sessionId(session)
+                            .build());
             state.contextMutable().replaceAll(SessionMessages::normalize);
             state.setPermissionContext(permissions.snapshot());
             return Optional.of(type.cast(state));
