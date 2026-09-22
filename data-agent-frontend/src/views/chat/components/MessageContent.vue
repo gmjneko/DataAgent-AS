@@ -17,8 +17,9 @@
 
 <script setup lang="ts">
   import { computed } from 'vue';
-  import { renderMessageMarkdown } from '@/utils/messageMarkdown';
+  import { parseMessageSegments } from '@/utils/messageMarkdown';
   import ChatFileDownload from './ChatFileDownload.vue';
+  import EChartBlock from './EChartBlock.vue';
 
   const props = withDefaults(defineProps<{ content: string; streaming?: boolean }>(), {
     streaming: false,
@@ -34,14 +35,16 @@
         return false;
       })
       .join('\n');
-    const html = renderMessageMarkdown(text, props.streaming);
-    return { html, fileIds: [...fileIds] };
+    return { segments: parseMessageSegments(text, props.streaming), fileIds: [...fileIds] };
   });
 </script>
 
 <template>
   <div class="message-content" :aria-busy="streaming">
-    <div v-if="parts.html" v-html="parts.html"></div>
+    <template v-for="(segment, index) in parts.segments" :key="`${segment.kind}-${index}`">
+      <div v-if="segment.kind === 'text'" v-html="segment.html"></div>
+      <EChartBlock v-else class="message-content__chart" :option-json="segment.optionJson" />
+    </template>
     <div v-if="parts.fileIds.length" class="message-content__downloads">
       <ChatFileDownload v-for="id in parts.fileIds" :key="id" :id="id" />
     </div>
@@ -157,6 +160,9 @@
   .message-content :deep(table) {
     display: block;
     overflow-x: auto;
+  }
+  .message-content__chart {
+    margin: 12px 0;
   }
   .message-content__downloads {
     display: flex;

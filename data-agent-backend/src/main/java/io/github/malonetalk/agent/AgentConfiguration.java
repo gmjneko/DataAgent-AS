@@ -29,13 +29,11 @@ import io.agentscope.harness.agent.workspace.LocalFsMode;
 import io.github.malonetalk.agent.models.ModelFactory;
 import io.github.malonetalk.agent.models.ModelProperties;
 import io.github.malonetalk.agent.tools.MarkAgentTool;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,52 +75,58 @@ public class AgentConfiguration {
         Path shared = workspace.resolve("shared");
         Files.createDirectories(shared);
 
-        HarnessAgent agent = HarnessAgent.builder()
-                .name("DataAgent")
-                .agentId("data-agent")
-                .sysPrompt("你是数据分析助手。遵循用户数据权限，查询使用语义层和只读 SQL 工具，口径不明确时调用 ask_user。")
-                .model(factory.getInstance(model))
-                .toolkit(toolkit)
-                .stateStore(store)
-                .workspace(workspace)
-                .filesystem(
-                        new LocalFilesystemSpec()
-                                .project(shared)
-                                .mode(LocalFsMode.SANDBOXED)
-                                .isolationScope(IsolationScope.USER)
-                )
-                .skillRepositories(skillRepositories)
-                .middleware(new DataAgentMiddleware(transcript, store))
-                .compaction(
-                        CompactionConfig.builder()
-                                .triggerMessages(properties.getTriggerMessages())
-                                .keepMessages(properties.getKeepMessages())
-                                .triggerTokens(properties.getTriggerTokens())
-                                .keepTokens(0)
-                                .flushBeforeCompact(false)
-                                .offloadBeforeCompact(true)
-                                .build()
-                )
-                .toolResultEviction(
-                        ToolResultEvictionConfig.builder()
-                                .maxResultChars(properties.getMaxToolResultChars())
-                                .build()
-                )
-                .disableMemoryHooks()
-                .disableMemoryTools()
-                .disableSubagents()
-                .disableShellTool()
-                .disableToolsConfig()
-                .disableDefaultWorkspaceSkills()
-                .disableAtPathExpansion()
-                .maxIters(properties.getMaxIters())
-                .enablePendingToolRecovery(true)
-                .build();
+        HarnessAgent agent =
+                HarnessAgent.builder()
+                        .name("DataAgent")
+                        .agentId("data-agent")
+                        .sysPrompt(
+                                """
+                                你是数据分析助手。遵循用户数据权限，查询使用语义层和只读 SQL 工具，口径不明确时调用 ask_user。
+                                回答中适合可视化时（如趋势对比、分类分布、占比构成），直接在正文里嵌入 ```echarts 代码块：
+                                内容为纯 JSON 的 ECharts Option，只写 title、xAxis、yAxis、series 等必要字段（tooltip/legend 等样式由前端补全）。
+                                少量明细数据用 Markdown 表格，单一数值直接用文字。\
+                                """)
+                        .model(factory.getInstance(model))
+                        .toolkit(toolkit)
+                        .stateStore(store)
+                        .workspace(workspace)
+                        .filesystem(
+                                new LocalFilesystemSpec()
+                                        .project(shared)
+                                        .mode(LocalFsMode.SANDBOXED)
+                                        .isolationScope(IsolationScope.USER))
+                        .skillRepositories(skillRepositories)
+                        .middleware(new DataAgentMiddleware(transcript, store))
+                        .compaction(
+                                CompactionConfig.builder()
+                                        .triggerMessages(properties.getTriggerMessages())
+                                        .keepMessages(properties.getKeepMessages())
+                                        .triggerTokens(properties.getTriggerTokens())
+                                        .keepTokens(0)
+                                        .flushBeforeCompact(false)
+                                        .offloadBeforeCompact(true)
+                                        .build())
+                        .toolResultEviction(
+                                ToolResultEvictionConfig.builder()
+                                        .maxResultChars(properties.getMaxToolResultChars())
+                                        .build())
+                        .disableMemoryHooks()
+                        .disableMemoryTools()
+                        .disableSubagents()
+                        .disableShellTool()
+                        .disableToolsConfig()
+                        .disableDefaultWorkspaceSkills()
+                        .disableAtPathExpansion()
+                        .maxIters(properties.getMaxIters())
+                        .enablePendingToolRecovery(true)
+                        .build();
         // Filesystem reads are needed for unloaded results; writes/shell are not application tools.
         agent.getToolkit().getToolNames().stream()
-                .filter(name -> !List.of("write_file", "edit_file", "execute", "wait_async_results")
-                        .contains(name)
-                ).forEach(permissions::allow);
+                .filter(
+                        name ->
+                                !List.of("write_file", "edit_file", "execute", "wait_async_results")
+                                        .contains(name))
+                .forEach(permissions::allow);
 
         return agent;
     }
