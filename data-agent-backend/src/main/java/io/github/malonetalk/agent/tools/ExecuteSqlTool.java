@@ -23,9 +23,11 @@ import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
 import io.github.malonetalk.agent.datasource.QueryResult;
 import io.github.malonetalk.agent.datasource.SqlExecutor;
+import io.github.malonetalk.dto.SqlTraceRecord;
 import io.github.malonetalk.entity.Datasource;
 import io.github.malonetalk.exception.ToolExceptionMapper;
 import io.github.malonetalk.service.DatasourceService;
+import io.github.malonetalk.service.SqlTraceService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -35,27 +37,45 @@ public class ExecuteSqlTool implements MarkAgentTool {
 
     private final DatasourceService dataSourceService;
     private final SqlExecutor sqlExecutor;
+    private final SqlTraceService sqlTraceService;
     private final ToolExceptionMapper toolExceptionMapper;
 
     @Tool(
             concurrencySafe = true,
             readOnly = true,
             name = "execute_sql",
-            description = "Execute SELECT SQL query on the target datasource and return the query result."
-                    + " Only supports SELECT queries, does not support INSERT/UPDATE/DELETE or"
-                    + " other modification operations."
-    )
+            description =
+                    "Execute SELECT SQL query on the target datasource and return the query result."
+                        + " Only supports SELECT queries, does not support INSERT/UPDATE/DELETE or"
+                        + " other modification operations.")
     public ToolResultBlock executeSql(
             @ToolParam(name = "sql", description = "The SELECT SQL query statement to execute")
-            String sql,
+                    String sql,
             RuntimeContext ctx) {
         return toolExceptionMapper.run(
                 () -> {
                     Datasource datasource =
                             dataSourceService.getDatasourceForSession(ctx.getSessionId());
+                    long startNanos = System.nanoTime();
                     QueryResult result = sqlExecutor.execute(datasource, sql);
+                    long durationMs = (System.nanoTime() - startNanos) / 1_000_000;
+                    sqlTraceService.record(
+                            SqlTraceRecord.builder()
+                                    .sessionId(ctx.getSessionId())
+                                    .userId(ctx.getUserId())
+                                    .traceId(resolveTraceId(ctx))
+                                    .datasource(datasource)
+                                    .sql(sql)
+                                    .result(result)
+                                    .durationMs(durationMs)
+                                    .build());
                     return ToolResultBlock.text(formatResult(result));
                 });
+    }
+
+    private String resolveTraceId(RuntimeContext ctx) {
+        Object value = ctx.get("traceId");
+        return value instanceof String traceId && !traceId.isBlank() ? traceId : null;
     }
 
     private String formatResult(QueryResult result) {

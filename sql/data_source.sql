@@ -272,3 +272,25 @@ CREATE TABLE IF NOT EXISTS `agentscope_agent_state` (
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`session_id`, `state_key`, `item_index`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SQL execution trace for the execute_sql agent tool (successful queries only).
+CREATE TABLE IF NOT EXISTS `sql_trace` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `session_id` VARCHAR(64) NOT NULL COMMENT '会话ID',
+    `user_id` INT DEFAULT NULL COMMENT '用户ID',
+    `trace_id` VARCHAR(64) DEFAULT NULL COMMENT '链路追踪ID',
+    `datasource_id` INT NOT NULL COMMENT '数据源ID',
+    `datasource_name` VARCHAR(255) DEFAULT NULL COMMENT '数据源名称',
+    `database_name` VARCHAR(255) DEFAULT NULL COMMENT '数据库名称',
+    `table_names` VARCHAR(1000) DEFAULT NULL COMMENT 'SQL 涉及的表名，逗号分隔',
+    `sql_text` MEDIUMTEXT COMMENT '原始 SQL',
+    `result_json` MEDIUMTEXT COMMENT '查询结果 JSON（columns/rows/totalRows/truncated）',
+    `row_count` INT DEFAULT NULL COMMENT '返回行数',
+    `truncated` TINYINT(1) DEFAULT 0 COMMENT '结果是否截断',
+    `duration_ms` BIGINT DEFAULT NULL COMMENT '执行耗时（毫秒）',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '执行时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_session_id` (`session_id`),
+    KEY `idx_datasource_id` (`datasource_id`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='SQL 执行追踪表';

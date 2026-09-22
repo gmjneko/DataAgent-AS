@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.malonetalk.mapper.SqlTraceMapper">
+
+    <resultMap id="BaseResultMap" type="io.github.malonetalk.entity.SqlTrace">
+        <id column="id" property="id"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="user_id" property="userId"/>
+        <result column="trace_id" property="traceId"/>
+        <result column="datasource_id" property="datasourceId"/>
+        <result column="datasource_name" property="datasourceName"/>
+        <result column="database_name" property="databaseName"/>
+        <result column="table_names" property="tableNames"/>
+        <result column="sql_text" property="sqlText"/>
+        <result column="result_json" property="resultJson"/>
+        <result column="row_count" property="rowCount"/>
+        <result column="truncated" property="truncated"/>
+        <result column="duration_ms" property="durationMs"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.github.malonetalk.entity.SqlTrace"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sql_trace (
+            session_id, user_id, trace_id,
+            datasource_id, datasource_name, database_name, table_names,
+            sql_text, result_json, row_count, truncated, duration_ms,
+            create_time
+        ) VALUES (
+            #{sessionId}, #{userId}, #{traceId},
+            #{datasourceId}, #{datasourceName}, #{databaseName}, #{tableNames},
+            #{sqlText}, #{resultJson}, #{rowCount}, #{truncated}, #{durationMs},
+            #{createTime}
+        )
+    </insert>
+
+    <select id="selectBySessionId" resultMap="BaseResultMap">
+        SELECT id, session_id, user_id, trace_id,
+               datasource_id, datasource_name, database_name, table_names,
+               sql_text, row_count, truncated, duration_ms, create_time
+        FROM sql_trace
+        WHERE session_id = #{sessionId}
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectByIdAndSessionId" resultMap="BaseResultMap">
+        SELECT *
+        FROM sql_trace
+        WHERE id = #{id} AND session_id = #{sessionId}
+    </select>
+
+</mapper>

@@ -24,6 +24,7 @@
   import ChatMessage from '@/views/chat/components/ChatMessage.vue';
   import ChatInput from '@/views/chat/components/ChatInput.vue';
   import SessionList from '@/views/chat/components/SessionList.vue';
+  import SqlTraceDrawer from '@/views/chat/components/SqlTraceDrawer.vue';
   import ReportPreviewDialog from '@/views/report/ReportPreviewDialog.vue';
   import ReportList from '@/views/report/ReportList.vue';
 
@@ -48,6 +49,7 @@
   const showSessionList = ref(window.innerWidth > 1100);
   const reportDialogVisible = ref(false);
   const reportListKey = ref(0);
+  const sqlTraceVisible = ref(false);
   const previewVisible = ref(false);
   const previewContent = ref('');
   const datasources = ref<DatasourceResponse[]>([]);
@@ -225,6 +227,9 @@
           >
             会话报告
           </el-button>
+          <el-button text class="chat-view__header-action" @click="sqlTraceVisible = true">
+            SQL 记录
+          </el-button>
           <el-button text class="chat-view__header-action" @click="handleNewSession">
             <el-icon><Plus /></el-icon>
             新建会话
@@ -283,6 +288,12 @@
         v-model:visible="previewVisible"
         title="报告预览"
         :content="previewContent"
+      />
+
+      <SqlTraceDrawer
+        v-model:visible="sqlTraceVisible"
+        :session-id="sessionId"
+        :ready="messages.length > 0"
       />
 
       <el-dialog
