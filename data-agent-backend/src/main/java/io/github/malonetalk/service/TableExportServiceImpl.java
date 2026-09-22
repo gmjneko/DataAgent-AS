@@ -19,7 +19,7 @@ package io.github.malonetalk.service;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
-import io.github.malonetalk.agent.SessionService;
+import io.github.malonetalk.agent.SessionOwnership;
 import io.github.malonetalk.agent.datasource.DynamicDataSourceManager;
 import io.github.malonetalk.agent.datasource.SqlExecutor;
 import io.github.malonetalk.common.ErrorCode;
@@ -62,7 +62,7 @@ public class TableExportServiceImpl implements TableExportService {
     private final TableExportMapper tableExportMapper;
     private final DynamicDataSourceManager dynamicDataSourceManager;
     private final SqlExecutor sqlExecutor;
-    private final SessionService sessionService;
+    private final SessionOwnership ownership;
 
     @Override
     public TableExportResponse create(
@@ -96,7 +96,7 @@ public class TableExportServiceImpl implements TableExportService {
             TableExportPageQuery query, Integer userId) {
         String sessionId = SemanticUtils.trimToNull(query.sessionId());
         if (sessionId != null) {
-            sessionService.requireOwnership(userId, sessionId);
+            ownership.requireOwnership(userId, sessionId);
         }
         int pageNumber = PageResponse.resolvePage(query.page());
         int pageSize = PageResponse.resolvePageSize(query.pageSize());
@@ -115,14 +115,14 @@ public class TableExportServiceImpl implements TableExportService {
     @Override
     public TableExportResource findDownload(String id, Integer userId) {
         TableExport tableExport = requireDownload(id);
-        sessionService.requireOwnership(userId, tableExport.getSessionId());
+        ownership.requireOwnership(userId, tableExport.getSessionId());
         return new TableExportResource(id + ".csv", tableExport.getCsvContent());
     }
 
     @Override
     public void deleteById(String id, Integer userId) {
         TableExport tableExport = requireExport(id);
-        sessionService.requireOwnership(userId, tableExport.getSessionId());
+        ownership.requireOwnership(userId, tableExport.getSessionId());
         if (tableExportMapper.deleteById(id) == 0) {
             throw exportNotFound(id);
         }

@@ -52,7 +52,7 @@ import reactor.core.publisher.Flux;
 public class AgentService {
     private final HarnessAgent agent;
     private final SessionOperations operations;
-    private final SessionService sessions;
+    private final SessionOwnership ownership;
     private final DatasourceService datasources;
     private final EventConverter converter;
     private final ExceptionResponseMapper exceptions;
@@ -66,7 +66,7 @@ public class AgentService {
         String traceId = MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
 
         return operations.stream(sessionId, () -> {
-                    sessions.bindUserSession(userId, sessionId);
+                    ownership.bindUserSession(userId, sessionId);
                     if (datasourceId != null) {
                         datasources.bindSessionDatasource(sessionId, datasourceId);
                     }
@@ -146,7 +146,7 @@ public class AgentService {
     }
 
     public void stop(int userId, String sessionId) {
-        sessions.requireOwnership(userId, sessionId);
+        ownership.requireOwnership(userId, sessionId);
         agent.getDelegate().interrupt(String.valueOf(userId), sessionId);
     }
 

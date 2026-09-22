@@ -23,12 +23,10 @@ import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.state.AgentState;
 import io.agentscope.core.state.AgentStateStore;
 import io.agentscope.harness.agent.HarnessAgent;
-import io.github.malonetalk.common.ErrorCode;
 import io.github.malonetalk.dto.SessionDatasourceBinding;
 import io.github.malonetalk.dto.SessionInfo;
 import io.github.malonetalk.dto.TurnItem;
 import io.github.malonetalk.entity.UserSession;
-import io.github.malonetalk.exception.BusinessException;
 import io.github.malonetalk.mapper.SessionDatasourceMapper;
 import io.github.malonetalk.mapper.UserSessionMapper;
 
@@ -41,6 +39,11 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * Session lifecycle management (history, listing, clearing). Needs the live agent, so nothing
+ * in the agent's tool chain may depend on this class — tool-facing code uses
+ * {@link SessionOwnership} for binding and ownership checks instead.
+ */
 @Service
 @RequiredArgsConstructor
 public class SessionService {
@@ -49,34 +52,12 @@ public class SessionService {
     private final AgentStateStore stateStore;
     private final SessionTranscript transcript;
     private final SessionHistory history;
+    private final SessionOwnership ownership;
     private final SessionDatasourceMapper sessionDatasourceMapper;
     private final UserSessionMapper userSessionMapper;
 
-    public synchronized void bindUserSession(int userId, String sessionId) {
-        SessionTranscript.validateSessionId(sessionId);
-        Integer owner = userSessionMapper.selectOwner(sessionId);
-        if (owner != null && owner != userId) {
-            throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-        userSessionMapper.insertIgnore(userId, sessionId);
-        requireOwnership(userId, sessionId);
-    }
-
-    public int owner(String sessionId, Integer userId) {
-        SessionTranscript.validateSessionId(sessionId);
-        Integer owner = userSessionMapper.selectOwner(sessionId);
-        if (owner == null || (userId != null && !Objects.equals(owner, userId))) {
-            throw BusinessException.of(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-        return owner;
-    }
-
-    public void requireOwnership(Integer userId, String sessionId) {
-        owner(sessionId, userId);
-    }
-
     public List<Msg> getSessionDebug(String sessionId, Integer userId) {
-        int owner = owner(sessionId, userId);
+        int owner = ownership.owner(sessionId, userId);
         return stateStore
                 .get(String.valueOf(owner), sessionId, "agent_state", AgentState.class)
                 .map(AgentState::getContext)
@@ -85,7 +66,7 @@ public class SessionService {
 
     public List<TurnItem> getSessionHistory(String sessionId, Integer userId) {
         return history.buildTurnItems(
-                transcript.read(String.valueOf(owner(sessionId, userId)), sessionId));
+                transcript.read(String.valueOf(ownership.owner(sessionId, userId)), sessionId));
     }
 
     public void clearSession(String sessionId, Integer userId) {
@@ -93,7 +74,7 @@ public class SessionService {
     }
 
     private void clearSessionState(String sessionId, Integer userId) {
-        String owner = String.valueOf(owner(sessionId, userId));
+        String owner = String.valueOf(ownership.owner(sessionId, userId));
         agent.clearContext(owner, sessionId);
         stateStore.delete(owner, sessionId);
         agent.clearStateCache(owner, sessionId);

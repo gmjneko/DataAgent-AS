@@ -33,13 +33,14 @@ class DynamicDataSourceManagerTest {
 
     @Test
     void missingDriverYieldsActionableBusinessException() {
-        Datasource ds = new Datasource();
-        ds.setId(1);
-        ds.setName("pg-without-driver");
-        ds.setType("postgresql");
-        ds.setHost("localhost");
-        ds.setPort(5432);
-        ds.setDatabaseName("db");
+        Datasource ds = Datasource.builder()
+                .id(1)
+                .name("pg-without-driver")
+                .type("postgresql")
+                .host("localhost")
+                .port(5432)
+                .databaseName("db")
+                .build();
 
         BusinessException ex =
                 assertThrows(BusinessException.class, () -> manager.getOrCreateDataSource(ds));

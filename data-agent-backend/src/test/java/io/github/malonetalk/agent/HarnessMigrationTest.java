@@ -158,7 +158,7 @@ class HarnessMigrationTest {
                     new AgentService(
                             restarted,
                             new SessionOperations(),
-                            mock(SessionService.class),
+                            mock(SessionOwnership.class),
                             mock(io.github.malonetalk.service.DatasourceService.class),
                             new io.github.malonetalk.convertor.EventConverter(List.of()),
                             new io.github.malonetalk.exception.ExceptionResponseMapper());
@@ -209,7 +209,7 @@ class HarnessMigrationTest {
                     new AgentService(
                             agent,
                             operations,
-                            mock(SessionService.class),
+                            mock(SessionOwnership.class),
                             mock(io.github.malonetalk.service.DatasourceService.class),
                             new io.github.malonetalk.convertor.EventConverter(List.of()),
                             new io.github.malonetalk.exception.ExceptionResponseMapper());
