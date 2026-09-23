@@ -20,6 +20,7 @@
   import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
   import * as echarts from 'echarts';
   import { useThemeStore } from '@/stores/theme';
+  import { mergeChartOption } from '@/utils/chartOption';
 
   const props = withDefaults(defineProps<{ optionJson: string; height?: number }>(), {
     height: 340,
@@ -33,38 +34,6 @@
   let observer: globalThis.ResizeObserver | null = null;
 
   const boxStyle = computed(() => ({ height: `${props.height}px` }));
-
-  /**
-   * 前端补全默认样式：agent 只输出 title/xAxis/yAxis/series 等必要字段。
-   * 显式固定各组件位置：ECharts v6 的默认布局是标题居中 + 图例在底部，
-   * 图例会压在 x 轴标签上，因此标题/图例/grid 间距必须全部显式声明。
-   */
-  function mergeDefaults(option: echarts.EChartsOption): echarts.EChartsOption {
-    const series = Array.isArray(option.series) ? option.series : [];
-    const cartesian =
-      series.length === 0 || series.every(item => item.type === 'bar' || item.type === 'line');
-    const named = series.some(item => typeof item.name === 'string' && item.name);
-    // title 允许写成数组（多标题），此时原样保留不做 merge
-    const mergedTitle =
-      option.title == null
-        ? undefined
-        : Array.isArray(option.title)
-          ? option.title
-          : { left: 0, top: 4, ...option.title };
-    return {
-      backgroundColor: 'transparent',
-      toolbox: { top: 4, right: 8, feature: { saveAsImage: {} } },
-      ...option,
-      title: mergedTitle,
-      tooltip: option.tooltip ?? { trigger: cartesian ? 'axis' : 'item' },
-      legend: option.legend ?? { top: 34, type: 'scroll' },
-      grid:
-        option.grid ??
-        (cartesian
-          ? { left: 8, right: 16, top: named ? 64 : 40, bottom: 8, containLabel: true }
-          : undefined),
-    };
-  }
 
   /** 严格 JSON.parse：LLM 输出不可信，应用内渲染不允许任何脚本执行面。 */
   function renderChart() {
@@ -86,7 +55,7 @@
 
     try {
       chart = echarts.init(container.value, theme.mode === 'dark' ? 'dark' : undefined);
-      chart.setOption(mergeDefaults(option));
+      chart.setOption(mergeChartOption(option, props.height));
       observer = new globalThis.ResizeObserver(() => chart?.resize());
       observer.observe(container.value);
     } catch (e) {
