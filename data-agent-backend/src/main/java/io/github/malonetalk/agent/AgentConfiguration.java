@@ -121,16 +121,15 @@ public class AgentConfiguration {
                         .disableMemoryHooks()
                         .disableMemoryTools()
                         .disableSubagents()
-                        .disableShellTool()
                         .disableToolsConfig()
                         .disableDefaultWorkspaceSkills()
                         .disableAtPathExpansion()
                         .maxIters(properties.getMaxIters())
                         .enablePendingToolRecovery(true)
                         .build();
-        // Shell stays disabled. File tools run inside the E2B sandbox.
+        // execute runs inside the E2B sandbox. Async tool polling stays disabled.
         agent.getToolkit().getToolNames().stream()
-                .filter(name -> !List.of("execute", "wait_async_results").contains(name))
+                .filter(name -> !"wait_async_results".equals(name))
                 .forEach(permissions::allow);
 
         return agent;

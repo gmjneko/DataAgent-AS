@@ -70,7 +70,8 @@ class ExecuteSqlToolTest {
         assertTrue(text.startsWith("数据过多，已保存成文件的形式放在沙箱中，路径为sql-results/"));
         assertTrue(
                 text.contains(
-                        "read_file、write_file、edit_file、grep_files、glob_files、list_files"));
+                        "read_file、write_file、edit_file、grep_files、glob_files、list_files、"
+                                + "execute"));
         assertTrue(
                 String.join("\n", sandbox.commands).contains(base64(ExecuteSqlTool.toCsv(result))));
         assertFalse(text.contains("文件包含前"));

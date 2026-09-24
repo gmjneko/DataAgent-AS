@@ -32,6 +32,7 @@ public final class SandboxDemand {
                     "grep_files",
                     "glob_files",
                     "list_files",
+                    "execute",
                     "execute_python");
 
     private SandboxDemand() {}

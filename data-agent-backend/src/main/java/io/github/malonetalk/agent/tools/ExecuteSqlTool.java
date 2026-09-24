@@ -112,7 +112,7 @@ public class ExecuteSqlTool implements MarkAgentTool {
                 "数据过多，已保存成文件的形式放在沙箱中，路径为"
                         + relativePath
                         + "，你可以使用read_file、write_file、edit_file、grep_files、glob_files、"
-                        + "list_files对工作区进行操作";
+                        + "list_files、execute对工作区进行操作";
         if (result.truncated()) {
             message += "。文件包含前" + result.rows().size() + "行";
         }

@@ -177,7 +177,7 @@ class AgentConfigurationTest {
             assertTrue(transcript.read("43", "isolated").isEmpty());
             assertTrue(agent.getToolkit().getToolNames().contains("write_file"));
             assertTrue(agent.getToolkit().getToolNames().contains("edit_file"));
-            assertFalse(agent.getToolkit().getToolNames().contains("execute"));
+            assertTrue(agent.getToolkit().getToolNames().contains("execute"));
             assertTrue(permissions.snapshot().toString().contains("write_file"));
             assertTrue(permissions.snapshot().toString().contains("edit_file"));
         }
