@@ -168,6 +168,11 @@
             <version>${agentscope.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-sandbox-e2b</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.modelcontextprotocol.sdk</groupId>
             <artifactId>mcp</artifactId>
             <version>0.17.0</version>

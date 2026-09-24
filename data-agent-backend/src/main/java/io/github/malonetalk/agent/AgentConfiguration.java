@@ -20,12 +20,14 @@ package io.github.malonetalk.agent;
 import io.agentscope.core.skill.repository.AgentSkillRepository;
 import io.agentscope.core.state.AgentStateStore;
 import io.agentscope.core.tool.Toolkit;
+import io.agentscope.extensions.mysql.snapshot.JdbcSnapshotSpec;
+import io.agentscope.extensions.sandbox.e2b.E2bFilesystemSpec;
+import io.agentscope.extensions.sandbox.e2b.E2bPersistenceMode;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.IsolationScope;
-import io.agentscope.harness.agent.filesystem.spec.LocalFilesystemSpec;
+import io.agentscope.harness.agent.filesystem.spec.SandboxFilesystemSpec;
 import io.agentscope.harness.agent.memory.compaction.CompactionConfig;
 import io.agentscope.harness.agent.memory.compaction.ToolResultEvictionConfig;
-import io.agentscope.harness.agent.workspace.LocalFsMode;
 import io.github.malonetalk.agent.models.ModelFactory;
 import io.github.malonetalk.agent.models.ModelProperties;
 import io.github.malonetalk.agent.tools.MarkAgentTool;
@@ -66,14 +68,20 @@ public class AgentConfiguration {
             AgentStateStore store,
             @Qualifier("skillRepositories") List<AgentSkillRepository> skillRepositories,
             ToolPermissions permissions,
-            SessionTranscript transcript)
+            SessionTranscript transcript,
+            E2bSandboxProperties e2b,
+            javax.sql.DataSource dataSource)
             throws IOException {
+        if (!e2b.isConfigured()) {
+            throw new IllegalStateException(
+                    "E2B sandbox is not configured (agentscope.e2b.api-key and template-id are"
+                            + " required).");
+        }
 
         Toolkit toolkit = new Toolkit();
         tools.forEach(toolkit::registerTool);
         Path workspace = Path.of(properties.getWorkspace()).toAbsolutePath().normalize();
-        Path shared = workspace.resolve("shared");
-        Files.createDirectories(shared);
+        Files.createDirectories(workspace);
 
         HarnessAgent agent =
                 HarnessAgent.builder()
@@ -90,11 +98,7 @@ public class AgentConfiguration {
                         .toolkit(toolkit)
                         .stateStore(store)
                         .workspace(workspace)
-                        .filesystem(
-                                new LocalFilesystemSpec()
-                                        .project(shared)
-                                        .mode(LocalFsMode.SANDBOXED)
-                                        .isolationScope(IsolationScope.USER))
+                        .filesystem(e2bFilesystem(e2b, dataSource))
                         .skillRepositories(skillRepositories)
                         .middleware(new DataAgentMiddleware(transcript, store))
                         .compaction(
@@ -120,14 +124,26 @@ public class AgentConfiguration {
                         .maxIters(properties.getMaxIters())
                         .enablePendingToolRecovery(true)
                         .build();
-        // Filesystem reads are needed for unloaded results; writes/shell are not application tools.
+        // Shell stays disabled. File tools run inside the E2B sandbox.
         agent.getToolkit().getToolNames().stream()
-                .filter(
-                        name ->
-                                !List.of("write_file", "edit_file", "execute", "wait_async_results")
-                                        .contains(name))
+                .filter(name -> !List.of("execute", "wait_async_results").contains(name))
                 .forEach(permissions::allow);
 
         return agent;
+    }
+
+    private static SandboxFilesystemSpec e2bFilesystem(
+            E2bSandboxProperties e2b, javax.sql.DataSource dataSource) {
+        return new E2bFilesystemSpec()
+                .apiKey(e2b.getApiKey())
+                .templateId(e2b.getTemplateId())
+                .apiBaseUrl(e2b.getApiBaseUrl())
+                .domain(e2b.getDomain())
+                .workspaceRoot(e2b.workspaceRoot())
+                .sandboxTimeoutSeconds(e2b.getSandboxTimeoutSeconds())
+                .readTimeoutSeconds(Math.max(120, e2b.getSandboxTimeoutSeconds()))
+                .persistenceMode(E2bPersistenceMode.TAR)
+                .snapshotSpec(new JdbcSnapshotSpec(dataSource))
+                .isolationScope(IsolationScope.SESSION);
     }
 }

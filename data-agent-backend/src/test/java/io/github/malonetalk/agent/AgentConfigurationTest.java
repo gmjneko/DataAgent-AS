@@ -38,16 +38,23 @@ import io.agentscope.core.state.AgentState;
 import io.agentscope.core.state.InMemoryAgentStateStore;
 import io.agentscope.core.state.State;
 import io.agentscope.core.tool.Tool;
+import io.agentscope.harness.agent.sandbox.ExecResult;
+import io.agentscope.harness.agent.sandbox.Sandbox;
+import io.agentscope.harness.agent.sandbox.SandboxContext;
+import io.agentscope.harness.agent.sandbox.SandboxState;
 import io.github.malonetalk.agent.models.ModelFactory;
 import io.github.malonetalk.agent.models.ModelProperties;
 import io.github.malonetalk.agent.tools.MarkAgentTool;
-import java.nio.file.Files;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
@@ -135,13 +142,20 @@ class AgentConfigurationTest {
                                 store,
                                 List.of(),
                                 permissions,
-                                transcript)) {
+                                transcript,
+                                configuredE2b(),
+                                dataSource())) {
             var context =
                     RuntimeContext.builder()
                             .userId("42")
                             .sessionId("isolated")
                             .put("traceId", "trace")
                             .put("datasourceId", 7)
+                            .put(
+                                    SandboxContext.class,
+                                    SandboxContext.builder()
+                                            .externalSandbox(new IdleSandbox())
+                                            .build())
                             .build();
             agent.streamEvents(new UserMessage("query"), context).blockLast(Duration.ofSeconds(10));
             assertNotNull(probe.received);
@@ -161,22 +175,88 @@ class AgentConfigurationTest {
             var state = agent.getDelegate().getAgentState("42", "isolated");
             assertFalse(state.getContext().toString().contains("result".repeat(500)));
             assertTrue(transcript.read("43", "isolated").isEmpty());
-            var filesystem = agent.getWorkspaceManager().getFilesystem();
-            filesystem.write(context, "private.txt", "private data");
-            var otherUser = RuntimeContext.builder().userId("43").sessionId("other").build();
-            assertFalse(filesystem.read(otherUser, "42/private.txt", 0, 100).isSuccess());
-            assertFalse(
-                    filesystem
-                            .read(otherUser, workspace.resolve("42/private.txt").toString(), 0, 100)
-                            .isSuccess());
-            assertThrows(
-                    SecurityException.class,
-                    () -> filesystem.read(otherUser, "../42/private.txt", 0, 100));
-            try (var files = Files.walk(workspace.resolve("42"))) {
-                assertTrue(
-                        files.anyMatch(p -> p.getFileName().toString().contains("tool")),
-                        "offloaded tool output exists");
-            }
+            assertTrue(agent.getToolkit().getToolNames().contains("write_file"));
+            assertTrue(agent.getToolkit().getToolNames().contains("edit_file"));
+            assertFalse(agent.getToolkit().getToolNames().contains("execute"));
+            assertTrue(permissions.snapshot().toString().contains("write_file"));
+            assertTrue(permissions.snapshot().toString().contains("edit_file"));
         }
+    }
+
+    @Test
+    void unconfiguredE2bRejectsAgentConstruction() {
+        var properties = new AgentProperties();
+        properties.setWorkspace(workspace.toString());
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        new AgentConfiguration()
+                                .dataAgent(
+                                        mock(ModelFactory.class),
+                                        new ModelProperties(),
+                                        properties,
+                                        List.of(),
+                                        transcriptStore(
+                                                new ToolPermissions(),
+                                                new SessionTranscript(properties)),
+                                        List.of(),
+                                        new ToolPermissions(),
+                                        new SessionTranscript(properties),
+                                        new E2bSandboxProperties(),
+                                        mock(DataSource.class)));
+    }
+
+    private static E2bSandboxProperties configuredE2b() {
+        E2bSandboxProperties e2b = new E2bSandboxProperties();
+        e2b.setApiKey("test-key");
+        e2b.setTemplateId("python-data");
+        e2b.setApiBaseUrl("http://e2b.example.local");
+        e2b.setDomain("e2b.example.local");
+        return e2b;
+    }
+
+    private static DataSource dataSource() throws SQLException {
+        DataSource dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenThrow(new SQLException("no database in unit test"));
+        return dataSource;
+    }
+
+    /** Accepts filesystem commands without contacting E2B. */
+    private static final class IdleSandbox implements Sandbox {
+        @Override
+        public ExecResult exec(
+                RuntimeContext runtimeContext, String command, Integer timeoutSeconds) {
+            return new ExecResult(0, "", "", false);
+        }
+
+        @Override
+        public void start() {}
+
+        @Override
+        public void stop() {}
+
+        @Override
+        public void shutdown() {}
+
+        @Override
+        public void close() {}
+
+        @Override
+        public boolean isRunning() {
+            return true;
+        }
+
+        @Override
+        public SandboxState getState() {
+            return null;
+        }
+
+        @Override
+        public InputStream persistWorkspace() {
+            return new ByteArrayInputStream(new byte[0]);
+        }
+
+        @Override
+        public void hydrateWorkspace(InputStream archive) {}
     }
 }
