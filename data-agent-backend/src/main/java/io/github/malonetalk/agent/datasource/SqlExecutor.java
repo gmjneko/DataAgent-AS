@@ -46,7 +46,8 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 public class SqlExecutor {
 
-    static final int MAX_ROWS = 200;
+    /** Safety cap. Results larger than the inline limit are stored as a sandbox file. */
+    static final int MAX_ROWS = 10_000;
     private static final int QUERY_TIMEOUT_SECONDS = 30;
 
     private final DynamicDataSourceManager dynamicDataSourceManager;

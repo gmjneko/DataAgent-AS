@@ -23,6 +23,7 @@ import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.mysql.snapshot.JdbcSnapshotSpec;
 import io.agentscope.extensions.sandbox.e2b.E2bFilesystemSpec;
 import io.agentscope.extensions.sandbox.e2b.E2bPersistenceMode;
+import io.agentscope.extensions.sandbox.e2b.E2bSandboxClient;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.IsolationScope;
 import io.agentscope.harness.agent.filesystem.spec.SandboxFilesystemSpec;
@@ -30,6 +31,8 @@ import io.agentscope.harness.agent.memory.compaction.CompactionConfig;
 import io.agentscope.harness.agent.memory.compaction.ToolResultEvictionConfig;
 import io.github.malonetalk.agent.models.ModelFactory;
 import io.github.malonetalk.agent.models.ModelProperties;
+import io.github.malonetalk.agent.sandbox.LazySandboxClient;
+import io.github.malonetalk.agent.sandbox.SandboxDemandMiddleware;
 import io.github.malonetalk.agent.tools.MarkAgentTool;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -101,6 +104,7 @@ public class AgentConfiguration {
                         .filesystem(e2bFilesystem(e2b, dataSource))
                         .skillRepositories(skillRepositories)
                         .middleware(new DataAgentMiddleware(transcript, store))
+                        .middleware(new SandboxDemandMiddleware())
                         .compaction(
                                 CompactionConfig.builder()
                                         .triggerMessages(properties.getTriggerMessages())
@@ -135,6 +139,7 @@ public class AgentConfiguration {
     private static SandboxFilesystemSpec e2bFilesystem(
             E2bSandboxProperties e2b, javax.sql.DataSource dataSource) {
         return new E2bFilesystemSpec()
+                .client(new LazySandboxClient(new E2bSandboxClient()))
                 .apiKey(e2b.getApiKey())
                 .templateId(e2b.getTemplateId())
                 .apiBaseUrl(e2b.getApiBaseUrl())
